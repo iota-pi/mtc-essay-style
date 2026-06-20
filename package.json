@@ -1,0 +1,28 @@
+{
+  "name": "mtc-essay-style",
+  "version": "1.0.0",
+  "description": "Style checker and word counter for Word (.docx) documents",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "mtc-essay-style": "./dist/cli/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "start": "tsx src/cli/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "commander": "^15.0.0",
+    "fast-xml-parser": "^5.9.3",
+    "jszip": "^3.10.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}
