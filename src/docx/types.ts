@@ -39,6 +39,7 @@ export interface ParagraphProperties {
 export interface DocxRun {
   text: string;
   properties: RunProperties;
+  footnoteId?: number;
 }
 
 export interface DocxParagraph {
@@ -69,4 +70,5 @@ export interface ParsedDocument {
   styles: Map<string, DocxStyle>;
   defaultRunProperties?: RunProperties;
   defaultParagraphProperties?: ParagraphProperties;
+  hasHeaderOrFooter: boolean;  // true if any header/footer XML parts exist
 }

@@ -34,3 +34,42 @@ export function cleanTempDir() {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
 }
+
+import { ParsedDocument, DocxParagraph } from "../src/docx/types.js";
+import { DocumentSections } from "../src/analysis/sections.js";
+import { RuleContext } from "../src/rules/types.js";
+import { resolveRunProperties, resolveParagraphProperties } from "../src/docx/style-resolver.js";
+
+/** Create a minimal DocxParagraph with text and optional overrides */
+export function createTestParagraph(text: string, overrides?: Partial<DocxParagraph>): DocxParagraph {
+  return {
+    runs: [{ text, properties: {} }],
+    properties: {},
+    hasPageBreakBefore: false,
+    hasImage: false,
+    footnoteRefs: [],
+    ...overrides
+  };
+}
+
+/** Create a minimal ParsedDocument with optional overrides */
+export function createTestDocument(overrides?: Partial<ParsedDocument>): ParsedDocument {
+  return {
+    paragraphs: [],
+    footnotes: [],
+    styles: new Map(),
+    hasHeaderOrFooter: true,
+    ...overrides
+  };
+}
+
+/** Create a RuleContext with sensible defaults */
+export function createTestContext(doc: ParsedDocument, sections: DocumentSections): RuleContext {
+  return {
+    document: doc,
+    sections,
+    resolveRunProperties: (run, para) => resolveRunProperties(run, para, doc),
+    resolveParagraphProperties: (para) => resolveParagraphProperties(para, doc)
+  };
+}
+

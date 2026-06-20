@@ -84,9 +84,12 @@ describe("DOCX Parser", () => {
     const parsed = await parseDocx(tempFilePath);
     expect(parsed.paragraphs.length).toBe(2);
     expect(parsed.paragraphs[0].runs[0].text).toBe("Title of Essay");
-    expect(parsed.paragraphs[1].runs.length).toBe(3); // text, italic footnote ref text, dot text
+    expect(parsed.paragraphs[1].runs.length).toBe(4); // text, italic run, footnote ref run, dot text
     expect(parsed.paragraphs[1].runs[0].text).toBe("This is paragraph one with a ");
     expect(parsed.paragraphs[1].runs[1].text).toBe("footnote ref");
+    expect(parsed.paragraphs[1].runs[2].text).toBe("");
+    expect(parsed.paragraphs[1].runs[2].footnoteId).toBe(1);
+    expect(parsed.paragraphs[1].runs[3].text).toBe(".");
   });
 
   it("should extract formatting properties", async () => {

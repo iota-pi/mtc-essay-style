@@ -183,18 +183,21 @@ function parseParagraph(pNode: any): DocxParagraph {
         }
 
         // Check for footnote reference
+        let runFootnoteId: number | undefined;
         if (r["w:footnoteReference"] !== undefined) {
           const fnRef = r["w:footnoteReference"];
           const refId = Number(fnRef["@_w:id"]);
           if (!isNaN(refId)) {
             footnoteRefs.push(refId);
+            runFootnoteId = refId;
           }
         }
 
-        if (text || hasImage || r["w:br"] !== undefined) {
+        if (text || hasImage || r["w:br"] !== undefined || runFootnoteId !== undefined) {
           runs.push({
             text,
-            properties: runProps
+            properties: runProps,
+            footnoteId: runFootnoteId
           });
         }
       }
@@ -373,11 +376,15 @@ export async function parseDocx(filePath: string): Promise<ParsedDocument> {
 
   collectAllParagraphs(body);
 
+  // Check if any header or footer XML files exist in the zip
+  const hasHeaderOrFooter = zip.file(/^word\/(header|footer)\d*\.xml$/).length > 0;
+
   return {
     paragraphs,
     footnotes,
     styles: stylesMap,
     defaultRunProperties,
-    defaultParagraphProperties
+    defaultParagraphProperties,
+    hasHeaderOrFooter
   };
 }
