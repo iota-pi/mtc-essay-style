@@ -41,6 +41,14 @@ export const fontSizeRule: StyleRule = {
         const size = resolved.fontSize; // in half-points (24 = 12pt)
 
         if (size !== 24) {
+          const defaultSize = doc.defaultRunProperties?.fontSize ||
+                              doc.styles.get("Normal")?.runProperties?.fontSize ||
+                              doc.styles.get("normal")?.runProperties?.fontSize;
+          
+          if (size === undefined && defaultSize === 24) {
+            continue;
+          }
+
           nonCompliantSizes.add(size !== undefined ? size / 2 : 0);
         }
       }

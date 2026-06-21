@@ -108,4 +108,55 @@ describe("Document Sections Classifier", () => {
     expect(sections.hasBibliography).toBe(true);
     expect(sections.bibliography.length).toBe(2);
   });
+
+  it("should not detect title page for single page document even with cover sheet text", () => {
+    const doc: ParsedDocument = {
+      paragraphs: [
+        createParagraph("This is page 1 with cover sheet text."),
+        createParagraph("And it has a body paragraph.")
+      ],
+      footnotes: [],
+      styles: new Map()
+    };
+
+    const sections = classifySections(doc);
+    expect(sections.hasTitlePage).toBe(false);
+    expect(sections.body.length).toBe(2);
+  });
+
+  it("should not detect title page if page 1 has body-length paragraph", () => {
+    const longParagraphText = "This is a very long paragraph that simulates body text on the first page. It contains a lot of words to ensure it exceeds the paragraph length threshold. By having this many words, it should trigger the logic that flags page 1 as part of the body instead of a title page, even if an image or cover sheet keyword is present.";
+    const doc: ParsedDocument = {
+      paragraphs: [
+        createParagraph(longParagraphText, { hasImage: true }),
+        createParagraph("Next Page Text", { hasPageBreakBefore: true })
+      ],
+      footnotes: [],
+      styles: new Map()
+    };
+
+    const sections = classifySections(doc);
+    expect(sections.hasTitlePage).toBe(false);
+    expect(sections.body.length).toBe(2);
+  });
+
+  it("should detect page break via section break hasPageBreakAfter", () => {
+    const doc: ParsedDocument = {
+      paragraphs: [
+        createParagraph("My Cover Sheet Page", { hasPageBreakAfter: true }),
+        createParagraph("This is Section 1 on page 2")
+      ],
+      footnotes: [],
+      styles: new Map()
+    };
+
+    const sections = classifySections(doc);
+    // Since hasPageBreakAfter is true, the document has 2 pages.
+    // The first paragraph is on page 1, the second on page 2.
+    // Page 1 has "cover sheet" text (word "Cover" is in "Cover Sheet Page"), so it detects title page!
+    expect(sections.hasTitlePage).toBe(true);
+    expect(sections.titlePage.length).toBe(1);
+    expect(sections.body.length).toBe(1);
+    expect(sections.body[0].runs[0].text).toBe("This is Section 1 on page 2");
+  });
 });

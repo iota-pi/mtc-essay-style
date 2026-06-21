@@ -1,13 +1,6 @@
 import { StyleRule, StyleViolation } from "../types.js";
-import { getParagraphText, findParagraphIndex, getRegionForParagraph } from "../utils.js";
+import { getParagraphText, findParagraphIndex, getRegionForParagraph, isSentenceStart, getParagraphSnippet } from "../utils.js";
 import { DocumentRegion } from "../../analysis/sections.js";
-
-// Helper to check if a match is at the start of a sentence
-function isSentenceStart(text: string, index: number): boolean {
-  if (index === 0) return true;
-  const preceding = text.substring(Math.max(0, index - 4), index);
-  return /[.!?]\s+$/.test(preceding) || /[.!?]"\s+$/.test(preceding) || /[.!?]'\s+$/.test(preceding);
-}
 
 export const abbreviationStyleRule: StyleRule = {
   id: "sbl-abbreviation-style",
@@ -45,13 +38,18 @@ export const abbreviationStyleRule: StyleRule = {
         
         if (raw !== correct) {
           violations.push({
-            ruleId: this.id,
-            ruleName: this.name,
+            ruleId: abbreviationStyleRule.id,
+            ruleName: abbreviationStyleRule.name,
             severity: "error",
-            message: `Incorrect form of "e.g." found: "${raw}". Correct academic form is "${correct}" (lowercase, punctuated with periods, and followed by a comma).`,
+            message: "Incorrect punctuation or capitalisation for abbreviation 'e.g.'",
             paragraphIndex: pIndex,
             region,
-            detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined
+            detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined,
+            correction: {
+              found: raw,
+              expected: correct
+            },
+            paragraphSnippet: getParagraphSnippet(text)
           });
         }
       }
@@ -66,13 +64,18 @@ export const abbreviationStyleRule: StyleRule = {
         
         if (raw !== correct) {
           violations.push({
-            ruleId: this.id,
-            ruleName: this.name,
+            ruleId: abbreviationStyleRule.id,
+            ruleName: abbreviationStyleRule.name,
             severity: "error",
-            message: `Incorrect form of "i.e." found: "${raw}". Correct academic form is "${correct}" (lowercase, punctuated with periods, and followed by a comma).`,
+            message: "Incorrect punctuation or capitalisation for abbreviation 'i.e.'",
             paragraphIndex: pIndex,
             region,
-            detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined
+            detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined,
+            correction: {
+              found: raw,
+              expected: correct
+            },
+            paragraphSnippet: getParagraphSnippet(text)
           });
         }
       }
@@ -87,13 +90,18 @@ export const abbreviationStyleRule: StyleRule = {
         
         if (raw !== correct) {
           violations.push({
-            ruleId: this.id,
-            ruleName: this.name,
+            ruleId: abbreviationStyleRule.id,
+            ruleName: abbreviationStyleRule.name,
             severity: "error",
-            message: `Incorrect form of "cf." found: "${raw}". Correct form is "${correct}" (lowercase with a period).`,
+            message: "Incorrect punctuation or capitalisation for abbreviation 'cf.'",
             paragraphIndex: pIndex,
             region,
-            detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined
+            detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined,
+            correction: {
+              found: raw,
+              expected: correct
+            },
+            paragraphSnippet: getParagraphSnippet(text)
           });
         }
       }
@@ -106,13 +114,18 @@ export const abbreviationStyleRule: StyleRule = {
         
         if (raw !== correct) {
           violations.push({
-            ruleId: this.id,
-            ruleName: this.name,
+            ruleId: abbreviationStyleRule.id,
+            ruleName: abbreviationStyleRule.name,
             severity: "error",
-            message: `Incorrect form of "et al." found: "${raw}". SBL style requires "et al." (no period after "et", period after "al").`,
+            message: "Incorrect punctuation or capitalisation for abbreviation 'et al.'",
             paragraphIndex: pIndex,
             region,
-            detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined
+            detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined,
+            correction: {
+              found: raw,
+              expected: correct
+            },
+            paragraphSnippet: getParagraphSnippet(text)
           });
         }
       }
@@ -123,13 +136,18 @@ export const abbreviationStyleRule: StyleRule = {
         const raw = match[0];
         if (raw !== "etc.") {
           violations.push({
-            ruleId: this.id,
-            ruleName: this.name,
+            ruleId: abbreviationStyleRule.id,
+            ruleName: abbreviationStyleRule.name,
             severity: "error",
-            message: `Incorrect form of "etc." found: "${raw}". Must be "etc." with a period.`,
+            message: "Incorrect punctuation for abbreviation 'etc.'",
             paragraphIndex: pIndex,
             region,
-            detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined
+            detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined,
+            correction: {
+              found: raw,
+              expected: "etc."
+            },
+            paragraphSnippet: getParagraphSnippet(text)
           });
         }
       }
@@ -140,13 +158,18 @@ export const abbreviationStyleRule: StyleRule = {
         const raw = match[0];
         if (raw !== "viz.") {
           violations.push({
-            ruleId: this.id,
-            ruleName: this.name,
+            ruleId: abbreviationStyleRule.id,
+            ruleName: abbreviationStyleRule.name,
             severity: "error",
-            message: `Incorrect form of "viz." found: "${raw}". Must be "viz." with a period.`,
+            message: "Incorrect punctuation for abbreviation 'viz.'",
             paragraphIndex: pIndex,
             region,
-            detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined
+            detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined,
+            correction: {
+              found: raw,
+              expected: "viz."
+            },
+            paragraphSnippet: getParagraphSnippet(text)
           });
         }
       }
@@ -155,14 +178,20 @@ export const abbreviationStyleRule: StyleRule = {
       caRegex.lastIndex = 0;
       while ((match = caRegex.exec(text)) !== null) {
         const raw = match[0]; // e.g. "ca 1500"
+        const correct = raw.startsWith("Ca") ? "Ca." + raw.substring(2) : "ca." + raw.substring(2);
         violations.push({
-          ruleId: this.id,
-          ruleName: this.name,
+          ruleId: abbreviationStyleRule.id,
+          ruleName: abbreviationStyleRule.name,
           severity: "error",
-          message: `Incorrect form of "ca." (circa) found in "${raw}". SBL style requires "ca." with a period (e.g., "ca. 1500").`,
+          message: "Incorrect punctuation for abbreviation 'ca.'",
           paragraphIndex: pIndex,
           region,
-          detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined
+          detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined,
+          correction: {
+            found: raw,
+            expected: correct
+          },
+          paragraphSnippet: getParagraphSnippet(text)
         });
       }
     }
@@ -187,3 +216,4 @@ export const abbreviationStyleRule: StyleRule = {
   }
 };
 export default abbreviationStyleRule;
+

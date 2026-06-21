@@ -45,15 +45,50 @@ export function formatText(result: CheckResult, filePath: string, minSeverity: s
       if (list.length === 0) return;
       lines.push(`  ${colorFn(title)}:`);
       for (const v of list) {
-        let msg = `    - [${v.ruleId}] ${v.message}`;
+        lines.push(`    - [${v.ruleId}] ${v.message}`);
+
+        // Context line
+        const contextParts: string[] = [];
         if (v.paragraphIndex !== undefined) {
-          msg += ` (Paragraph ${v.paragraphIndex + 1}`;
-          if (v.region) {
-            msg += ` in ${v.region}`;
-          }
-          msg += ")";
+          contextParts.push(`Paragraph ${v.paragraphIndex + 1}`);
         }
-        lines.push(msg);
+        
+        let footnoteId: string | undefined;
+        if (v.detail) {
+          const fnMatch = v.detail.match(/Footnote ID:\s*(\S+)/i);
+          if (fnMatch) {
+            footnoteId = fnMatch[1];
+          }
+        }
+        
+        if (footnoteId !== undefined) {
+          contextParts.push(`Footnote ${footnoteId}`);
+        }
+        
+        if (v.paragraphSnippet) {
+          contextParts.push(`starting "${v.paragraphSnippet}"`);
+        }
+        
+        let regionText: string | undefined = v.region;
+        if (!regionText && footnoteId !== undefined) {
+          regionText = "footnote";
+        }
+        
+        if (contextParts.length > 0) {
+          let contextLine = "      " + contextParts[0];
+          if (contextParts.length > 1) {
+            contextLine += ` (${contextParts.slice(1).join(", ")})`;
+          }
+          if (regionText) {
+            contextLine += `, in ${regionText}`;
+          }
+          lines.push(contextLine);
+        }
+
+        // Correction line
+        if (v.correction) {
+          lines.push(`      ❌ "${chalk.red(v.correction.found)}" → ✅ "${chalk.green(v.correction.expected)}"`);
+        }
       }
     };
 
@@ -75,7 +110,10 @@ export function formatJson(result: CheckResult, filePath: string): string {
       severity: v.severity,
       message: v.message,
       paragraphIndex: v.paragraphIndex,
-      region: v.region
+      region: v.region,
+      correction: v.correction,
+      paragraphSnippet: v.paragraphSnippet
     }))
   }, null, 2);
 }
+

@@ -23,11 +23,72 @@ export const bibleRefsInFootnotesRule: StyleRule = {
         const para = footnote.paragraphs[i];
         const text = getParagraphText(para);
         
+        // Build insideQuotes map
+        const insideQuotes = new Array(text.length).fill(false);
+        let doubleQuoteOpen = false;
+        let singleQuoteOpen = false;
+
+        for (let idx = 0; idx < text.length; idx++) {
+          const c = text[idx];
+          
+          if (c === '“') {
+            doubleQuoteOpen = true;
+          } else if (c === '”') {
+            doubleQuoteOpen = false;
+          } else if (c === '‘') {
+            singleQuoteOpen = true;
+          } else if (c === '’') {
+            const isApostrophe = (idx > 0 && /\w/.test(text[idx-1])) && (idx < text.length - 1 && /\w/.test(text[idx+1]));
+            if (!isApostrophe) {
+              singleQuoteOpen = false;
+            }
+          } else if (c === '"') {
+            doubleQuoteOpen = !doubleQuoteOpen;
+          } else if (c === '\'') {
+            const isApostrophe = (idx > 0 && /\w/.test(text[idx-1])) && (idx < text.length - 1 && /\w/.test(text[idx+1]));
+            if (!isApostrophe) {
+              singleQuoteOpen = !singleQuoteOpen;
+            }
+          }
+          
+          insideQuotes[idx] = doubleQuoteOpen || singleQuoteOpen;
+        }
+
+        // Build insideItalics map
+        const insideItalics = new Array(text.length).fill(false);
+        let charIdx = 0;
+        for (const run of para.runs) {
+          const resolvedProps = context.resolveRunProperties(run, para);
+          const italic = resolvedProps.italic === true;
+          for (let rCharIdx = 0; rCharIdx < run.text.length; rCharIdx++) {
+            if (charIdx < insideItalics.length) {
+              insideItalics[charIdx] = italic;
+              charIdx++;
+            }
+          }
+        }
+
         // Find matches
         BIBLE_REF_REGEX.lastIndex = 0;
         let match;
         while ((match = BIBLE_REF_REGEX.exec(text)) !== null) {
           const matchedText = match[0];
+          const matchStart = match.index;
+          const matchLength = matchedText.length;
+
+          let isIgnored = false;
+          for (let j = 0; j < matchLength; j++) {
+            const idx = matchStart + j;
+            if (idx < text.length && (insideQuotes[idx] || insideItalics[idx])) {
+              isIgnored = true;
+              break;
+            }
+          }
+
+          if (isIgnored) {
+            continue;
+          }
+
           violations.push({
             ruleId: this.id,
             ruleName: this.name,

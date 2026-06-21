@@ -10,6 +10,7 @@ import { fontSizeRule } from "./definitions/font-size.js";
 import { bibleConsecutiveRefsRule } from "./definitions/bible-consecutive-refs.js";
 import { bibleRangeEndashRule } from "./definitions/bible-range-endash.js";
 import { bodyEndashRule } from "./definitions/body-endash.js";
+import { sblReferenceAbbreviationsRule } from "./definitions/sbl-reference-abbreviations.js";
 
 // Import and register all style rules.
 export const defaultRegistry = new RuleRegistry();
@@ -24,7 +25,8 @@ defaultRegistry.registerAll([
   fontSizeRule,
   bibleConsecutiveRefsRule,
   bibleRangeEndashRule,
-  bodyEndashRule
+  bodyEndashRule,
+  sblReferenceAbbreviationsRule
 ]);
 
 export { RuleRegistry } from "./registry.js";

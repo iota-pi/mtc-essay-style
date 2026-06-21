@@ -36,24 +36,45 @@ export function classifySections(doc: ParsedDocument): DocumentSections {
     }
     paragraphPages[i] = currentPage;
     
-    // If paragraph has page break in runs, the NEXT paragraph starts on new page
+    // If paragraph has page break in runs or section break after, the NEXT paragraph starts on new page
     const runHasPageBreak = para.hasPageBreakBefore && !para.properties.pageBreakBefore;
-    if (runHasPageBreak) {
+    if (runHasPageBreak || para.hasPageBreakAfter) {
       currentPage++;
     }
   }
 
   // 2. Detect title page (page 1)
   let hasTitlePage = false;
-  const page1Paras: DocxParagraph[] = [];
+  const maxPage = paragraphPages.length > 0 ? paragraphPages[paragraphPages.length - 1] : 1;
   
-  for (let i = 0; i < paragraphs.length; i++) {
-    if (paragraphPages[i] === 1) {
-      page1Paras.push(paragraphs[i]);
-      const text = getParagraphText(paragraphs[i]).toLowerCase();
-      if (text.includes("cover sheet") || paragraphs[i].hasImage) {
-        hasTitlePage = true;
+  if (maxPage > 1) {
+    let hasTitlePageIndicator = false;
+    let hasBodyParagraphOnPage1 = false;
+    let page1WordCount = 0;
+    
+    for (let i = 0; i < paragraphs.length; i++) {
+      if (paragraphPages[i] === 1) {
+        const text = getParagraphText(paragraphs[i]);
+        const cleanText = text.toLowerCase();
+        
+        // Split and count words (filter out empty strings)
+        const words = cleanText.split(/\s+/).filter(w => w.length > 0);
+        page1WordCount += words.length;
+        
+        if (words.length > 50) {
+          hasBodyParagraphOnPage1 = true;
+        }
+        
+        if (cleanText.includes("cover sheet") || paragraphs[i].hasImage) {
+          hasTitlePageIndicator = true;
+        }
       }
+    }
+    
+    // We classify page 1 as a title page only if there is a cover page indicator,
+    // page 1 does not contain long body-like paragraphs, and the overall word count is low.
+    if (hasTitlePageIndicator && !hasBodyParagraphOnPage1 && page1WordCount < 150) {
+      hasTitlePage = true;
     }
   }
 

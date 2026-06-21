@@ -87,7 +87,14 @@ export function resolveRunProperties(
   ];
 
   // 2. Paragraph style properties
-  const pStyleId = paragraph.properties.styleId;
+  let pStyleId = paragraph.properties.styleId;
+  if (!pStyleId) {
+    if (styles.has("Normal")) {
+      pStyleId = "Normal";
+    } else if (styles.has("normal")) {
+      pStyleId = "normal";
+    }
+  }
   if (pStyleId) {
     for (const key of keys) {
       const val = getStyleProperty(pStyleId, styles, key);
@@ -142,7 +149,14 @@ export function resolveParagraphProperties(
     "pageBreakBefore"
   ];
 
-  const pStyleId = paragraph.properties.styleId;
+  let pStyleId = paragraph.properties.styleId;
+  if (!pStyleId) {
+    if (styles.has("Normal")) {
+      pStyleId = "Normal";
+    } else if (styles.has("normal")) {
+      pStyleId = "normal";
+    }
+  }
   if (pStyleId) {
     for (const key of pKeys) {
       const val = getParagraphStyleProperty(pStyleId, styles, key);

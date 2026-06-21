@@ -29,9 +29,19 @@ export const lineSpacingRule: StyleRule = {
       const spacing = resolved.lineSpacing;
       
       // Double line spacing is 480 twips with "auto" rule (or undefined which defaults to auto in Word)
-      const hasDoubleSpacing = spacing && 
+      let hasDoubleSpacing = spacing && 
         spacing.line === 480 && 
         (spacing.lineRule === "auto" || spacing.lineRule === undefined);
+
+      if (!hasDoubleSpacing && (!spacing || spacing.line === undefined)) {
+        const defaultSpacing = doc.defaultParagraphProperties?.lineSpacing ||
+                               doc.styles.get("Normal")?.paragraphProperties?.lineSpacing ||
+                               doc.styles.get("normal")?.paragraphProperties?.lineSpacing;
+        
+        if (defaultSpacing && defaultSpacing.line === 480 && (defaultSpacing.lineRule === "auto" || defaultSpacing.lineRule === undefined)) {
+          hasDoubleSpacing = true;
+        }
+      }
 
       if (!hasDoubleSpacing) {
         const pIndex = findParagraphIndex(para, doc);

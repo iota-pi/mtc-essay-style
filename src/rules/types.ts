@@ -13,6 +13,11 @@ export interface StyleViolation {
   paragraphIndex?: number;    // original index in paragraphs array if applicable
   region?: DocumentRegion;
   detail?: string;            // additional debugging info
+  correction?: {
+    found: string;
+    expected: string;
+  };
+  paragraphSnippet?: string;
 }
 
 export interface RuleContext {

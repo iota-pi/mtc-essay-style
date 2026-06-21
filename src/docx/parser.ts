@@ -213,10 +213,13 @@ function parseParagraph(pNode: any): DocxParagraph {
 
   traverseParagraph(pNode);
 
+  const hasPageBreakAfter = pPr && pPr["w:sectPr"] !== undefined;
+
   return {
     runs,
     properties,
     hasPageBreakBefore,
+    hasPageBreakAfter: !!hasPageBreakAfter,
     hasImage,
     footnoteRefs
   };

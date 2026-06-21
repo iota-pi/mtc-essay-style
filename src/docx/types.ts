@@ -46,6 +46,7 @@ export interface DocxParagraph {
   runs: DocxRun[];
   properties: ParagraphProperties;
   hasPageBreakBefore: boolean;  // either via pPr or <w:br type="page"/>
+  hasPageBreakAfter?: boolean;  // via w:sectPr in pPr (section break)
   hasImage: boolean;            // contains a drawing/image element
   footnoteRefs: number[];       // footnote IDs referenced in this para
 }

@@ -1,6 +1,6 @@
 import { StyleRule, StyleViolation } from "../types.js";
 import { BIBLE_BOOK_PATTERN, SBL_BOOK_MAP, COMMON_WRONG_ABBREVIATIONS, SBL_VALID_ABBREVIATIONS } from "../data/sbl-books.js";
-import { getParagraphText, findParagraphIndex, getRegionForParagraph } from "../utils.js";
+import { getParagraphText, findParagraphIndex, getRegionForParagraph, getParagraphSnippet } from "../utils.js";
 import { DocumentRegion } from "../../analysis/sections.js";
 
 // List of all book keys for matching
@@ -14,22 +14,22 @@ const bookAlternation = ALL_BOOKS.map(name => escapeRegExp(name)).join("|");
 
 // Regex to find start of a citation: Book Name followed by a space and a chapter number
 const CITATION_START_REGEX = new RegExp(
-  `\\b(${BIBLE_BOOK_PATTERN.source})\\s+(\\d+)(?:[.:](\\d+))?`,
+  `\\b(${BIBLE_BOOK_PATTERN.source})\\s+(\\d+)(?:[.:](\\d+(?:[–-]\\d+)?))?`,
   "gi"
 );
 
 // Regexes for subsequent elements in the list
 const NEXT_BOOK_REGEX = new RegExp(
-  `^\\s*([,;])?\\s*(?:(?:and|or)\\s+)?(${bookAlternation})\\s+(\\d+)(?:[.:](\\d+))?`,
+  `^\\s*([,;])?\\s*(?:(?:and|or)\\s+)?(${bookAlternation})\\s+(\\d+)(?:[.:](\\d+(?:[–-]\\d+)?))?`,
   "i"
 );
-const NEXT_CHAPTER_VERSE_REGEX = /^\s*([,;])?\s*(?:(?:and|or)\s+)?(\d+)[.:](\d+)/;
-const NEXT_NUMBER_ONLY_REGEX = /^\s*([,;])?\s*(?:(?:and|or)\s+)?(\d+)/;
+const NEXT_CHAPTER_VERSE_REGEX = /^\s*([,;])?\s*(?:(?:and|or)\s+)?(\d+)[.:](\d+(?:[–-]\d+)?)/;
+const NEXT_NUMBER_ONLY_REGEX = /^\s*([,;])?\s*(?:(?:and|or)\s+)?(\d+(?:[–-]\d+)?)/;
 
 interface ParsedRef {
   book: string;
   chapter: number;
-  verse?: number;
+  verse?: string; // string to preserve ranges like "29–33"
   text: string;
   startIndex: number;
   endIndex: number;
@@ -38,7 +38,7 @@ interface ParsedRef {
 export const bibleConsecutiveRefsRule: StyleRule = {
   id: "sbl-bible-consecutive-refs",
   name: "Consecutive Bible References Separator",
-  description: "Checks that consecutive Bible references are separated by commas when in the same chapter and by semicolons when in different chapters or books.",
+  description: "Checks that consecutive Bible references are separated by commas when in the same chapter and by semicolons when in different chapters or books, and flags redundant books/chapters.",
   scope: ["body", "footnote"],
   check(context): StyleViolation[] {
     const violations: StyleViolation[] = [];
@@ -56,7 +56,7 @@ export const bibleConsecutiveRefsRule: StyleRule = {
       while ((startMatch = CITATION_START_REGEX.exec(text)) !== null) {
         const firstBook = startMatch[1];
         const firstChapter = parseInt(startMatch[2], 10);
-        const firstVerse = startMatch[3] ? parseInt(startMatch[3], 10) : undefined;
+        const firstVerse = startMatch[3] || undefined;
         
         let prevRef: ParsedRef = {
           book: firstBook.toLowerCase(),
@@ -106,20 +106,24 @@ export const bibleConsecutiveRefsRule: StyleRule = {
           // Parse new ref properties
           let nextBook = prevRef.book;
           let nextChapter = prevRef.chapter;
-          let nextVerse: number | undefined;
+          let nextVerse: string | undefined;
+          let verseText = "";
 
           if (matchedType === "book") {
             nextBook = match[2].toLowerCase();
             nextChapter = parseInt(match[3], 10);
-            nextVerse = match[4] ? parseInt(match[4], 10) : undefined;
+            nextVerse = match[4] || undefined;
+            verseText = match[4] || "";
           } else if (matchedType === "chapter-verse") {
             nextChapter = parseInt(match[2], 10);
-            nextVerse = parseInt(match[3], 10);
+            nextVerse = match[3];
+            verseText = match[3];
           } else if (matchedType === "number") {
             const num = parseInt(match[2], 10);
             if (prevRef.verse !== undefined) {
               // If previous reference had a verse, a single number is a verse in the same chapter
-              nextVerse = num;
+              nextVerse = match[2];
+              verseText = match[2];
             } else {
               // If previous reference had no verse, a single number is a new chapter
               nextChapter = num;
@@ -127,58 +131,90 @@ export const bibleConsecutiveRefsRule: StyleRule = {
             }
           }
 
-          // Validate separator
-          const sameChapter = (prevRef.book === nextBook && prevRef.chapter === nextChapter);
+          const sameBook = (nextBook === prevRef.book);
+          const sameChapter = (sameBook && nextChapter === prevRef.chapter);
           const hasSemicolon = separatorChar === ";" || prefix.includes(";");
           const hasComma = separatorChar === "," || prefix.includes(",");
           const hasConjunction = /\b(and|or)\b/i.test(prefix) || /\b(and|or)\b/i.test(matchedString);
 
-          if (sameChapter) {
-            if (hasSemicolon) {
-              violations.push({
-                ruleId: bibleConsecutiveRefsRule.id,
-                ruleName: bibleConsecutiveRefsRule.name,
-                severity: "error",
-                message: `Incorrect separator in consecutive Bible references: use a comma (not a semicolon) to separate references within the same chapter (found "${prevRef.text}; ${matchedString.trim()}").`,
-                paragraphIndex: pIndex,
-                region,
-                detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined
-              });
-            } else if (!hasComma && !hasConjunction) {
-              violations.push({
-                ruleId: bibleConsecutiveRefsRule.id,
-                ruleName: bibleConsecutiveRefsRule.name,
-                severity: "error",
-                message: `Missing separator between consecutive Bible references "${prevRef.text}" and "${matchedString.trim()}". Separators must be commas for same chapter.`,
-                paragraphIndex: pIndex,
-                region,
-                detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined
-              });
+          // Construct correct/expected prefix and citation
+          const conjMatch = prefix.match(/\b(and|or)\b/i);
+          const conj = conjMatch ? conjMatch[1] : "";
+          const hasSeparatorInOriginal = prefix.includes(",") || prefix.includes(";");
+          const expectedSeparator = sameChapter ? "," : ";";
+
+          let expectedPrefix = "";
+          if (hasSeparatorInOriginal) {
+            if (conj) {
+              expectedPrefix = `${expectedSeparator} ${conj} `;
+            } else {
+              expectedPrefix = `${expectedSeparator} `;
             }
           } else {
-            // Different chapters or books
-            if (hasComma && !hasSemicolon && !hasConjunction) {
-              const reason = prevRef.book !== nextBook ? "different books" : "different chapters";
-              violations.push({
-                ruleId: bibleConsecutiveRefsRule.id,
-                ruleName: bibleConsecutiveRefsRule.name,
-                severity: "error",
-                message: `Incorrect separator in consecutive Bible references: use a semicolon (not a comma) to separate references in ${reason} (found "${prevRef.text}, ${matchedString.trim()}").`,
-                paragraphIndex: pIndex,
-                region,
-                detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined
-              });
-            } else if (!hasSemicolon && !hasConjunction) {
-              violations.push({
-                ruleId: bibleConsecutiveRefsRule.id,
-                ruleName: bibleConsecutiveRefsRule.name,
-                severity: "error",
-                message: `Missing separator between consecutive Bible references "${prevRef.text}" and "${matchedString.trim()}". Separators must be semicolons for different chapters/books.`,
-                paragraphIndex: pIndex,
-                region,
-                detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined
-              });
+            if (conj) {
+              expectedPrefix = ` ${conj} `;
+            } else {
+              expectedPrefix = `${expectedSeparator} `;
             }
+          }
+
+          let expectedCitation = "";
+          if (sameBook) {
+            if (sameChapter) {
+              if (nextVerse !== undefined) {
+                expectedCitation = verseText;
+              } else {
+                expectedCitation = String(nextChapter);
+              }
+            } else {
+              if (nextVerse !== undefined) {
+                expectedCitation = `${nextChapter}:${verseText}`;
+              } else {
+                expectedCitation = String(nextChapter);
+              }
+            }
+          } else {
+            const rawBook = matchedType === "book" ? match[2] : prevRef.book;
+            if (nextVerse !== undefined) {
+              expectedCitation = `${rawBook} ${nextChapter}:${verseText}`;
+            } else {
+              expectedCitation = `${rawBook} ${nextChapter}`;
+            }
+          }
+
+          const expectedText = expectedPrefix + expectedCitation;
+
+          // Determine specific violation message type if mismatch
+          if (matchedString !== expectedText) {
+            let message = "Incorrect formatting in consecutive Bible references";
+            let severity: "error" | "warning" = "error";
+
+            if (matchedType === "book" && sameBook) {
+              message = "Redundant book name in consecutive Bible references";
+            } else if (sameChapter && (matchedType === "book" || matchedType === "chapter-verse") && matchedString.includes(String(nextChapter))) {
+              message = "Redundant chapter number in consecutive Bible references";
+            } else if (sameChapter && hasSemicolon) {
+              message = "Incorrect separator in consecutive Bible references: use a comma to separate references within the same chapter";
+            } else if (!sameChapter && hasComma && !hasSemicolon && !hasConjunction) {
+              message = "Incorrect separator in consecutive Bible references: use a semicolon to separate references in different chapters/books";
+            } else if (!hasSeparatorInOriginal && !hasConjunction) {
+              message = "Missing separator between consecutive Bible references";
+            }
+
+            violations.push({
+              ruleId: bibleConsecutiveRefsRule.id,
+              ruleName: bibleConsecutiveRefsRule.name,
+              severity,
+              message,
+              paragraphIndex: pIndex,
+              region,
+              detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined,
+              correction: {
+                found: matchedString,
+                expected: expectedText
+              },
+              paragraphSnippet: getParagraphSnippet(text)
+            });
           }
 
           // Move to next
@@ -218,3 +254,4 @@ export const bibleConsecutiveRefsRule: StyleRule = {
   }
 };
 export default bibleConsecutiveRefsRule;
+

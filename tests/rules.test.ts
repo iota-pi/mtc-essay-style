@@ -14,6 +14,7 @@ import { fontSizeRule } from "../src/rules/definitions/font-size.js";
 import { bibleConsecutiveRefsRule } from "../src/rules/definitions/bible-consecutive-refs.js";
 import { bibleRangeEndashRule } from "../src/rules/definitions/bible-range-endash.js";
 import { bodyEndashRule } from "../src/rules/definitions/body-endash.js";
+import { sblReferenceAbbreviationsRule } from "../src/rules/definitions/sbl-reference-abbreviations.js";
 
 describe("Rule 1: Bible References in Footnotes", () => {
   it("should flag Bible references inside footnotes", () => {
@@ -63,7 +64,55 @@ describe("Rule 1: Bible References in Footnotes", () => {
 
     expect(violations.length).toBe(0);
   });
+
+  it("should ignore Bible references in footnotes if they are in italics or inside quotes", () => {
+    const doc = createTestDocument({
+      footnotes: [
+        {
+          id: 1,
+          paragraphs: [
+            // Italic reference
+            {
+              runs: [
+                { text: "Check out the book ", properties: {} },
+                { text: "Gen 1:1", properties: { italic: true } },
+                { text: " which is a great read.", properties: {} }
+              ],
+              properties: {},
+              hasPageBreakBefore: false,
+              hasImage: false,
+              footnoteRefs: []
+            },
+            // Reference inside quotes (straight double quotes)
+            createTestParagraph('Read the article "Matt 5:3" in the journal.'),
+            // Reference inside quotes (curly double quotes)
+            createTestParagraph('Read the article “Luke 2:1” in the journal.'),
+            // Reference inside quotes (straight single quotes)
+            createTestParagraph("Read the article 'John 3:16' in the journal."),
+            // Reference inside quotes (curly single quotes)
+            createTestParagraph("Read the article ‘Mark 1:1’ in the journal."),
+            // Mixed case: one inside quotes, one not
+            createTestParagraph('See "Rom 8:28" and also check Phil 4:13.')
+          ]
+        }
+      ]
+    });
+    const sections: DocumentSections = {
+      titlePage: [],
+      body: [],
+      bibliography: [],
+      hasTitlePage: false,
+      hasBibliography: false
+    };
+    const context = createTestContext(doc, sections);
+    const violations = bibleRefsInFootnotesRule.check(context);
+
+    // Only Phil 4:13 should be flagged, the rest should be ignored
+    expect(violations.length).toBe(1);
+    expect(violations[0].message).toContain('Phil 4:13');
+  });
 });
+
 
 describe("Rule 2: Bible Reference Format", () => {
   it("should flag missing spaces in citations", () => {
@@ -81,8 +130,12 @@ describe("Rule 2: Bible Reference Format", () => {
     const violations = bibleRefFormatRule.check(context);
 
     expect(violations.length).toBe(2);
-    expect(violations[0].message).toContain("Gen1");
-    expect(violations[1].message).toContain("1Cor13");
+    expect(violations[0].message).toBe("Missing space in Bible reference");
+    expect(violations[0].correction?.found).toBe("Gen1");
+    expect(violations[0].correction?.expected).toBe("Gen 1");
+    expect(violations[1].message).toBe("Missing space in Bible reference");
+    expect(violations[1].correction?.found).toBe("1Cor13");
+    expect(violations[1].correction?.expected).toBe("1Cor 13");
   });
 
   it("should flag ch. or v. inside citations", () => {
@@ -102,8 +155,12 @@ describe("Rule 2: Bible Reference Format", () => {
     const violations = bibleRefFormatRule.check(context);
 
     expect(violations.length).toBe(2);
-    expect(violations[0].message).toContain('"Gen ch. 1"');
-    expect(violations[1].message).toContain('Matt 5:3, v. 4');
+    expect(violations[0].message).toBe("Do not use 'ch.' or 'chapter' in Bible citations");
+    expect(violations[0].correction?.found).toBe("Gen ch. 1");
+    expect(violations[0].correction?.expected).toBe("Gen 1");
+    expect(violations[1].message).toBe("Do not use 'v.', 'verse', 'vv.', or 'verses' in Bible citations");
+    expect(violations[1].correction?.found).toBe("Matt 5:3, v. 4");
+    expect(violations[1].correction?.expected).toBe("Matt 5:3, 4");
   });
 
 
@@ -130,7 +187,7 @@ describe("Rule 2: Bible Reference Format", () => {
 describe("Rule 3: Bible Book Name Abbreviations", () => {
   it("should flag book abbreviations with trailing periods", () => {
     const doc = createTestDocument({
-      paragraphs: [createTestParagraph("Look at Gen. 1:1 or Matt. 5:3.")]
+      paragraphs: [createTestParagraph("Look at (Gen. 1:1) or Matt. 5:3.")]
     });
     const sections: DocumentSections = {
       titlePage: [],
@@ -143,13 +200,17 @@ describe("Rule 3: Bible Book Name Abbreviations", () => {
     const violations = bibleBookAbbreviationsRule.check(context);
 
     expect(violations.length).toBe(2);
-    expect(violations[0].message).toContain("Gen.");
-    expect(violations[1].message).toContain("Matt.");
+    expect(violations[0].message).toBe("Incorrect Bible book abbreviation inside parentheses");
+    expect(violations[0].correction?.found).toBe("Gen. 1:1");
+    expect(violations[0].correction?.expected).toBe("Gen 1:1");
+    expect(violations[1].message).toBe("Incorrect Bible book form in running text");
+    expect(violations[1].correction?.found).toBe("Matt. 5:3");
+    expect(violations[1].correction?.expected).toBe("Matthew 5:3");
   });
 
   it("should flag non-SBL book abbreviations", () => {
     const doc = createTestDocument({
-      paragraphs: [createTestParagraph("See Ex 20:1 or Mk 1:1.")]
+      paragraphs: [createTestParagraph("See (Ex 20:1) or Mk 1:1.")]
     });
     const sections: DocumentSections = {
       titlePage: [],
@@ -162,14 +223,18 @@ describe("Rule 3: Bible Book Name Abbreviations", () => {
     const violations = bibleBookAbbreviationsRule.check(context);
 
     expect(violations.length).toBe(2);
-    expect(violations[0].message).toContain("Ex 20:1");
-    expect(violations[1].message).toContain("Mk 1:1");
+    expect(violations[0].message).toBe("Incorrect Bible book abbreviation inside parentheses");
+    expect(violations[0].correction?.found).toBe("Ex 20:1");
+    expect(violations[0].correction?.expected).toBe("Exod 20:1");
+    expect(violations[1].message).toBe("Incorrect Bible book form in running text");
+    expect(violations[1].correction?.found).toBe("Mk 1:1");
+    expect(violations[1].correction?.expected).toBe("Mark 1:1");
   });
 
-  it("should flag full book names in citations unless at sentence start", () => {
+  it("should flag full book names in parenthetical citations", () => {
     const doc = createTestDocument({
       paragraphs: [
-        createTestParagraph("In Genesis 1:1 we read something. Genesis 1:1 states this.")
+        createTestParagraph("We see this in the text (Genesis 1:1).")
       ]
     });
     const sections: DocumentSections = {
@@ -182,15 +247,17 @@ describe("Rule 3: Bible Book Name Abbreviations", () => {
     const context = createTestContext(doc, sections);
     const violations = bibleBookAbbreviationsRule.check(context);
 
-    // Only the first one ("In Genesis 1:1") should be flagged.
-    // The second one ("Genesis 1:1 states...") is at sentence start.
     expect(violations.length).toBe(1);
-    expect(violations[0].message).toContain("Genesis 1:1");
+    expect(violations[0].message).toBe("Use SBL book abbreviation inside parentheses");
+    expect(violations[0].correction?.found).toBe("Genesis 1:1");
+    expect(violations[0].correction?.expected).toBe("Gen 1:1");
   });
 
-  it("should pass correct SBL book abbreviations", () => {
+  it("should flag abbreviations in running text", () => {
     const doc = createTestDocument({
-      paragraphs: [createTestParagraph("We read Gen 1:1 and Mark 1:1.")]
+      paragraphs: [
+        createTestParagraph("According to Gen 1:1, it states this.")
+      ]
     });
     const sections: DocumentSections = {
       titlePage: [],
@@ -202,6 +269,49 @@ describe("Rule 3: Bible Book Name Abbreviations", () => {
     const context = createTestContext(doc, sections);
     const violations = bibleBookAbbreviationsRule.check(context);
 
+    expect(violations.length).toBe(1);
+    expect(violations[0].message).toBe("Use full Bible book name in running text");
+    expect(violations[0].correction?.found).toBe("Gen 1:1");
+    expect(violations[0].correction?.expected).toBe("Genesis 1:1");
+  });
+
+  it("should pass correct SBL book abbreviations/names and un-abbreviated books", () => {
+    const doc = createTestDocument({
+      paragraphs: [
+        createTestParagraph("In Genesis 1:1, we read (Gen 1:1). Ruth 1:1 and (Ruth 1:1) both pass.")
+      ]
+    });
+    const sections: DocumentSections = {
+      titlePage: [],
+      body: doc.paragraphs,
+      bibliography: [],
+      hasTitlePage: false,
+      hasBibliography: false
+    };
+    const context = createTestContext(doc, sections);
+    const violations = bibleBookAbbreviationsRule.check(context);
+
+    expect(violations.length).toBe(0);
+  });
+
+  it("should not flag anything inside footnotes (footnotes excluded)", () => {
+    const doc = createTestDocument({
+      footnotes: [
+        {
+          id: 1,
+          paragraphs: [createTestParagraph("Gen 1:1 and (Genesis 1:1) in footnote.")]
+        }
+      ]
+    });
+    const sections: DocumentSections = {
+      titlePage: [],
+      body: [],
+      bibliography: [],
+      hasTitlePage: false,
+      hasBibliography: false
+    };
+    const context = createTestContext(doc, sections);
+    const violations = bibleBookAbbreviationsRule.check(context);
     expect(violations.length).toBe(0);
   });
 });
@@ -224,6 +334,20 @@ describe("Rule 4: Abbreviation Punctuation and Capitalisation", () => {
     const violations = abbreviationStyleRule.check(context);
 
     expect(violations.length).toBe(7);
+    expect(violations[0].correction?.found).toBe("eg,");
+    expect(violations[0].correction?.expected).toBe("e.g.,");
+    expect(violations[1].correction?.found).toBe("e.g.");
+    expect(violations[1].correction?.expected).toBe("e.g.,");
+    expect(violations[2].correction?.found).toBe("ie,");
+    expect(violations[2].correction?.expected).toBe("i.e.,");
+    expect(violations[3].correction?.found).toBe("ie.");
+    expect(violations[3].correction?.expected).toBe("i.e.,");
+    expect(violations[4].correction?.found).toBe("cf ");
+    expect(violations[4].correction?.expected).toBe("cf.");
+    expect(violations[5].correction?.found).toBe("et. al.");
+    expect(violations[5].correction?.expected).toBe("et al.");
+    expect(violations[6].correction?.found).toBe("etc");
+    expect(violations[6].correction?.expected).toBe("etc.");
   });
 
   it("should flag incorrect circa ca.", () => {
@@ -241,7 +365,8 @@ describe("Rule 4: Abbreviation Punctuation and Capitalisation", () => {
     const violations = abbreviationStyleRule.check(context);
 
     expect(violations.length).toBe(1);
-    expect(violations[0].message).toContain("ca.");
+    expect(violations[0].correction?.found).toBe("ca 1500");
+    expect(violations[0].correction?.expected).toBe("ca. 1500");
   });
 
   it("should pass correct forms of abbreviations", () => {
@@ -442,6 +567,36 @@ describe("Rule 7: Double Line Spacing", () => {
     expect(violations.length).toBe(0);
   });
 
+  it("should pass when paragraph has undefined line spacing but Normal style defines double spacing", () => {
+    const doc = createTestDocument({
+      paragraphs: [
+        createTestParagraph("This paragraph has no direct spacing, it inherits Normal style spacing.")
+      ],
+      styles: new Map([
+        [
+          "Normal",
+          {
+            styleId: "Normal",
+            name: "Normal",
+            type: "paragraph",
+            paragraphProperties: { lineSpacing: { line: 480, lineRule: "auto" } }
+          }
+        ]
+      ])
+    });
+    const sections: DocumentSections = {
+      titlePage: [],
+      body: doc.paragraphs,
+      bibliography: [],
+      hasTitlePage: false,
+      hasBibliography: false
+    };
+    const context = createTestContext(doc, sections);
+    const violations = lineSpacingRule.check(context);
+
+    expect(violations.length).toBe(0);
+  });
+
   it("should skip headings and bibliography", () => {
     const doc = createTestDocument({
       paragraphs: [
@@ -515,6 +670,42 @@ describe("Rule 8: Font Size 12pt", () => {
 
     expect(violations.length).toBe(0);
   });
+
+  it("should pass runs that are undefined but Normal style defines size 12pt (fontSize 24)", () => {
+    const doc = createTestDocument({
+      paragraphs: [
+        {
+          runs: [{ text: "Default size run.", properties: {} }],
+          properties: {},
+          hasPageBreakBefore: false,
+          hasImage: false,
+          footnoteRefs: []
+        }
+      ],
+      styles: new Map([
+        [
+          "Normal",
+          {
+            styleId: "Normal",
+            name: "Normal",
+            type: "paragraph",
+            runProperties: { fontSize: 24 }
+          }
+        ]
+      ])
+    });
+    const sections: DocumentSections = {
+      titlePage: [],
+      body: doc.paragraphs,
+      bibliography: [],
+      hasTitlePage: false,
+      hasBibliography: false
+    };
+    const context = createTestContext(doc, sections);
+    const violations = fontSizeRule.check(context);
+
+    expect(violations.length).toBe(0);
+  });
 });
 
 describe("Rule 9: Consecutive Bible References Separator", () => {
@@ -533,8 +724,12 @@ describe("Rule 9: Consecutive Bible References Separator", () => {
     const violations = bibleConsecutiveRefsRule.check(context);
 
     expect(violations.length).toBe(2);
-    expect(violations[0].message).toContain("comma (not a semicolon)");
-    expect(violations[1].message).toContain("comma (not a semicolon)");
+    expect(violations[0].message).toBe("Incorrect separator in consecutive Bible references: use a comma to separate references within the same chapter");
+    expect(violations[0].correction?.found).toBe("; 5");
+    expect(violations[0].correction?.expected).toBe(", 5");
+    expect(violations[1].message).toBe("Redundant chapter number in consecutive Bible references");
+    expect(violations[1].correction?.found).toBe("; 5:5");
+    expect(violations[1].correction?.expected).toBe(", 5");
   });
 
   it("should flag comma when different chapters or books", () => {
@@ -551,9 +746,16 @@ describe("Rule 9: Consecutive Bible References Separator", () => {
     const context = createTestContext(doc, sections);
     const violations = bibleConsecutiveRefsRule.check(context);
 
-    expect(violations.length).toBe(2);
-    expect(violations[0].message).toContain("semicolon (not a comma)");
-    expect(violations[1].message).toContain("semicolon (not a comma)");
+    expect(violations.length).toBe(3);
+    expect(violations[0].message).toBe("Incorrect separator in consecutive Bible references: use a semicolon to separate references in different chapters/books");
+    expect(violations[0].correction?.found).toBe(", 2:3");
+    expect(violations[0].correction?.expected).toBe("; 2:3");
+    expect(violations[1].message).toBe("Redundant book name in consecutive Bible references");
+    expect(violations[1].correction?.found).toBe(" and Gen 1:1");
+    expect(violations[1].correction?.expected).toBe(" and 1:1");
+    expect(violations[2].message).toBe("Incorrect separator in consecutive Bible references: use a semicolon to separate references in different chapters/books");
+    expect(violations[2].correction?.found).toBe(", Exod 3:2");
+    expect(violations[2].correction?.expected).toBe("; Exod 3:2");
   });
 
   it("should pass when separators are correct", () => {
@@ -571,6 +773,48 @@ describe("Rule 9: Consecutive Bible References Separator", () => {
     const violations = bibleConsecutiveRefsRule.check(context);
 
     expect(violations.length).toBe(0);
+  });
+
+  it("should flag redundant book names", () => {
+    const doc = createTestDocument({
+      paragraphs: [createTestParagraph("Check 1 Kgs 11:11; 1 Kgs 16:29–33.")]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = bibleConsecutiveRefsRule.check(context);
+
+    expect(violations.length).toBe(1);
+    expect(violations[0].message).toBe("Redundant book name in consecutive Bible references");
+    expect(violations[0].correction?.found).toBe("; 1 Kgs 16:29–33");
+    expect(violations[0].correction?.expected).toBe("; 16:29–33");
+  });
+
+  it("should flag redundant chapter numbers", () => {
+    const doc = createTestDocument({
+      paragraphs: [createTestParagraph("Check 1 Kgs 11:11, 11:15.")]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = bibleConsecutiveRefsRule.check(context);
+
+    expect(violations.length).toBe(1);
+    expect(violations[0].message).toBe("Redundant chapter number in consecutive Bible references");
+    expect(violations[0].correction?.found).toBe(", 11:15");
+    expect(violations[0].correction?.expected).toBe(", 15");
+  });
+
+  it("should flag both redundant book name and chapter number", () => {
+    const doc = createTestDocument({
+      paragraphs: [createTestParagraph("Check 1 Kgs 11:11; 1 Kgs 11:15.")]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = bibleConsecutiveRefsRule.check(context);
+
+    expect(violations.length).toBe(1);
+    expect(violations[0].message).toBe("Redundant book name in consecutive Bible references");
+    expect(violations[0].correction?.found).toBe("; 1 Kgs 11:15");
+    expect(violations[0].correction?.expected).toBe(", 15");
   });
 });
 
@@ -590,8 +834,12 @@ describe("Rule 10: Bible Range Dash Check", () => {
     const violations = bibleRangeEndashRule.check(context);
 
     expect(violations.length).toBe(2);
-    expect(violations[0].message).toContain("Gen 1:1-3");
-    expect(violations[1].message).toContain("Gen 1-2");
+    expect(violations[0].message).toBe("Use an en-dash (–) instead of a hyphen (-) for ranges in Bible references");
+    expect(violations[0].correction?.found).toBe("Gen 1:1-3");
+    expect(violations[0].correction?.expected).toBe("Gen 1:1–3");
+    expect(violations[1].message).toBe("Use an en-dash (–) instead of a hyphen (-) for ranges in Bible references");
+    expect(violations[1].correction?.found).toBe("Gen 1-2");
+    expect(violations[1].correction?.expected).toBe("Gen 1–2");
   });
 
   it("should pass when en-dash is used in ranges", () => {
@@ -651,3 +899,117 @@ describe("Rule 11: Body Text En-dash Check", () => {
     expect(violations.length).toBe(0);
   });
 });
+
+describe("Rule 12: SBL Reference Abbreviations", () => {
+  it("should flag abbreviated forms outside parentheses", () => {
+    const doc = createTestDocument({
+      paragraphs: [createTestParagraph("In v. 3 we read this.")]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = sblReferenceAbbreviationsRule.check(context);
+    expect(violations.length).toBe(1);
+    expect(violations[0].message).toContain("Abbreviated reference form used outside parentheses");
+    expect(violations[0].correction?.found).toBe("v. 3");
+    expect(violations[0].correction?.expected).toBe("verse 3");
+  });
+
+  it("should pass capitalised full word at sentence start and lowercase full word mid-sentence outside parentheses", () => {
+    const doc = createTestDocument({
+      paragraphs: [createTestParagraph("Verse 3 says this. Yes, verse 3 is key.")]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = sblReferenceAbbreviationsRule.check(context);
+    expect(violations.length).toBe(0);
+  });
+
+  it("should flag lowercase full word at sentence start", () => {
+    const doc = createTestDocument({
+      paragraphs: [createTestParagraph("verse 3 says this.")]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = sblReferenceAbbreviationsRule.check(context);
+    expect(violations.length).toBe(1);
+    expect(violations[0].correction?.found).toBe("verse 3");
+    expect(violations[0].correction?.expected).toBe("Verse 3");
+  });
+
+  it("should flag unabbreviated forms inside parentheses", () => {
+    const doc = createTestDocument({
+      paragraphs: [createTestParagraph("We read this (verse 3).")]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = sblReferenceAbbreviationsRule.check(context);
+    expect(violations.length).toBe(1);
+    expect(violations[0].message).toContain("Unabbreviated reference form used inside parentheses/footnotes");
+    expect(violations[0].correction?.found).toBe("verse 3");
+    expect(violations[0].correction?.expected).toBe("v. 3");
+  });
+
+  it("should pass abbreviated forms inside parentheses", () => {
+    const doc = createTestDocument({
+      paragraphs: [createTestParagraph("We read this (v. 3).")]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = sblReferenceAbbreviationsRule.check(context);
+    expect(violations.length).toBe(0);
+  });
+
+  it("should flag singular abbreviation used with a range", () => {
+    const doc = createTestDocument({
+      paragraphs: [createTestParagraph("We read this (v. 10–12).")]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = sblReferenceAbbreviationsRule.check(context);
+    expect(violations.length).toBe(1);
+    expect(violations[0].message).toContain("Singular reference form used with a range or list of values");
+    expect(violations[0].correction?.found).toBe("v. 10–12");
+    expect(violations[0].correction?.expected).toBe("vv. 10–12");
+  });
+
+  it("should flag plural abbreviation used with a single value", () => {
+    const doc = createTestDocument({
+      paragraphs: [createTestParagraph("We read this (vv. 10).")]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = sblReferenceAbbreviationsRule.check(context);
+    expect(violations.length).toBe(1);
+    expect(violations[0].message).toContain("Plural reference form used with a single value");
+    expect(violations[0].correction?.found).toBe("vv. 10");
+    expect(violations[0].correction?.expected).toBe("v. 10");
+  });
+
+  it("should enforce abbreviated forms in footnotes", () => {
+    const doc = createTestDocument({
+      footnotes: [
+        {
+          id: 1,
+          paragraphs: [createTestParagraph("See verse 3.")]
+        }
+      ]
+    });
+    const sections = { titlePage: [], body: [], bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = sblReferenceAbbreviationsRule.check(context);
+    expect(violations.length).toBe(1);
+    expect(violations[0].correction?.found).toBe("verse 3");
+    expect(violations[0].correction?.expected).toBe("v. 3");
+  });
+
+  it("should only flag unabbreviated words when followed by a number", () => {
+    const doc = createTestDocument({
+      paragraphs: [createTestParagraph("In this verse, we see a key theme.")]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = sblReferenceAbbreviationsRule.check(context);
+    expect(violations.length).toBe(0);
+  });
+});
+

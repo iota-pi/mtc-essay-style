@@ -49,3 +49,44 @@ export function getRegionForParagraph(para: DocxParagraph, sections: DocumentSec
   }
   return "body";
 }
+
+/**
+ * Checks if a character position is inside parentheses
+ */
+export function isInsideParentheses(text: string, index: number): boolean {
+  let parenDepth = 0;
+  for (let i = 0; i < index; i++) {
+    if (text[i] === "(") {
+      parenDepth++;
+    } else if (text[i] === ")") {
+      parenDepth--;
+    }
+  }
+  if (parenDepth > 0) {
+    const afterText = text.substring(index);
+    if (afterText.includes(")")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Checks if a character position follows sentence-ending punctuation
+ */
+export function isSentenceStart(text: string, index: number): boolean {
+  if (index === 0) return true;
+  const preceding = text.substring(Math.max(0, index - 4), index);
+  return /[.!?]\s+$/.test(preceding) || /[.!?]"\s+$/.test(preceding) || /[.!?]'\s+$/.test(preceding);
+}
+
+/**
+ * Gets a truncated snippet of paragraph text for location context
+ */
+export function getParagraphSnippet(text: string, maxLength = 40): string {
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return text.substring(0, maxLength) + "…";
+}
+

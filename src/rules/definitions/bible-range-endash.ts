@@ -1,6 +1,6 @@
 import { StyleRule, StyleViolation } from "../types.js";
 import { BIBLE_BOOK_PATTERN, SBL_BOOK_MAP, COMMON_WRONG_ABBREVIATIONS, SBL_VALID_ABBREVIATIONS } from "../data/sbl-books.js";
-import { getParagraphText, findParagraphIndex, getRegionForParagraph } from "../utils.js";
+import { getParagraphText, findParagraphIndex, getRegionForParagraph, getParagraphSnippet } from "../utils.js";
 import { DocumentRegion } from "../../analysis/sections.js";
 
 // List of all book keys for matching
@@ -44,10 +44,15 @@ export const bibleRangeEndashRule: StyleRule = {
             ruleId: bibleRangeEndashRule.id,
             ruleName: bibleRangeEndashRule.name,
             severity: "error",
-            message: `Use an en-dash (–) instead of a hyphen (-) for ranges in Bible reference "${fullMatch}" (expected "${expected}").`,
+            message: "Use an en-dash (–) instead of a hyphen (-) for ranges in Bible references",
             paragraphIndex: pIndex,
             region,
-            detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined
+            detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined,
+            correction: {
+              found: fullMatch,
+              expected
+            },
+            paragraphSnippet: getParagraphSnippet(text)
           });
         }
       }
@@ -73,3 +78,4 @@ export const bibleRangeEndashRule: StyleRule = {
   }
 };
 export default bibleRangeEndashRule;
+
