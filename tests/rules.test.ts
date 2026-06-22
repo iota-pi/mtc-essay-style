@@ -112,6 +112,32 @@ describe("Rule 1: Bible References in Footnotes", () => {
     expect(violations.length).toBe(1);
     expect(violations[0].message).toContain('Phil 4:13');
   });
+
+  it("should ignore Bible references in footnotes if they are part of SBL citations", () => {
+    const doc = createTestDocument({
+      footnotes: [
+        {
+          id: 1,
+          paragraphs: [
+            createTestParagraph("Charles H. Talbert, Reading John (New York: Crossroad, 1992), 127."),
+            createTestParagraph("Leyerle, \"John Chrysostom on the Gaze,\" JECS 1 (1993): 159–74."),
+            createTestParagraph("Talbert, Reading John, 145.")
+          ]
+        }
+      ]
+    });
+    const sections: DocumentSections = {
+      titlePage: [],
+      body: [],
+      bibliography: [],
+      hasTitlePage: false,
+      hasBibliography: false
+    };
+    const context = createTestContext(doc, sections);
+    const violations = bibleRefsInFootnotesRule.check(context);
+
+    expect(violations.length).toBe(0);
+  });
 });
 
 

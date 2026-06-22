@@ -1,6 +1,7 @@
 import { StyleRule, StyleViolation } from "../types.js";
 import { BIBLE_BOOK_PATTERN } from "../data/sbl-books.js";
 import { getParagraphText } from "../utils.js";
+import { detectSblReferences, isWithinReference } from "../sbl-reference-detector.js";
 
 // Regex for bible references: a book name/abbreviation, followed by space, followed by a chapter and/or verse number
 // e.g. Gen 1, Gen 1:1, Gen 1.1, 1 Cor 13, Ps 23:1-6
@@ -22,6 +23,7 @@ export const bibleRefsInFootnotesRule: StyleRule = {
       for (let i = 0; i < footnote.paragraphs.length; i++) {
         const para = footnote.paragraphs[i];
         const text = getParagraphText(para);
+        const refSpans = detectSblReferences(text);
         
         // Build insideQuotes map
         const insideQuotes = new Array(text.length).fill(false);
@@ -82,6 +84,16 @@ export const bibleRefsInFootnotesRule: StyleRule = {
             if (idx < text.length && (insideQuotes[idx] || insideItalics[idx])) {
               isIgnored = true;
               break;
+            }
+          }
+
+          if (!isIgnored) {
+            for (let j = 0; j < matchLength; j++) {
+              const idx = matchStart + j;
+              if (isWithinReference(idx, refSpans)) {
+                isIgnored = true;
+                break;
+              }
             }
           }
 

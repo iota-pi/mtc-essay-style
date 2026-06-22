@@ -1,0 +1,200 @@
+export interface SblReferenceSpan {
+  start: number;   // character offset in the footnote text
+  end: number;     // character offset (exclusive)
+  type: string;
+}
+
+// Common SBL reference prefixes
+const PREFIX = '(?:(?:[Cc]f\\.|[Ss]ee|[Ss]ee\\s+also|[Ee]\\.g\\.,)\\s+)?';
+
+// Author name pattern (capitalized names, initials, optional 'and', '&', commas, 'et al.')
+const AUTHOR = `[A-Z][A-Za-z\\s\\.&\\’'-]+(?:,\\s+(?:and\\s+)?[A-Z][A-Za-z\\s\\.&\\’'-]+)*(?:\\s+et\\s+al\\.)?`;
+
+const PATTERNS = [
+  // 1. Chapter/Section in Edited Volume (First Reference)
+  // e.g. Harold W. Attridge, "Jewish Historiography," in Early Judaism and Its Modern Interpreters, ed. Robert A. Kraft (Philadelphia: Fortress, 1986), 311–43.
+  {
+    type: 'chapter-first',
+    regex: new RegExp(
+      `^${PREFIX}${AUTHOR},\\s+["“”'‘’][^"“”'‘’]+?["“”'‘’],?\\s+[Ii]n\\s+[^,]+,\\s*(?:[Ee]d\\.|[Tt]rans\\.|[Ee]dited\\s+by)\\s+[^(\\n]+\\((?:[^)]+?:\\s*)?[^)]*?\\d{4}\\),\\s*(?:[Pp]p?\\.\\s*)?\\d+[\\d\\s–-]*\\b\\.?`
+    )
+  },
+  // 2. Journal Article (First Reference)
+  // e.g. Blake Leyerle, "John Chrysostom on the Gaze," JECS 1 (1993): 159–74.
+  {
+    type: 'journal-first',
+    regex: new RegExp(
+      `^${PREFIX}${AUTHOR},\\s+["“”'‘’][^"“”'‘’]+?["“”'‘’],?\\s+[^(\\n]+\\s+\\d+(?:\\.\\d+)?\\s*\\(\\d{4}\\):\\s*\\d+[\\d\\s–-]*\\b\\.?`
+    )
+  },
+  // 3. Book (First Reference)
+  // e.g. Charles H. Talbert, Reading John: A Literary and Theological Commentary (New York: Crossroad, 1992), 127.
+  {
+    type: 'book-first',
+    regex: new RegExp(
+      `^${PREFIX}${AUTHOR},\\s+[^(\\n]+\\((?:[^)]+?:\\s*)?[^)]*?\\d{4}\\),\\s*(?:[Pp]p?\\.\\s*)?\\d+[\\d\\s–-]*\\b\\.?`
+    )
+  },
+  // 4. Short / Subsequent Reference (Book, Journal, or Chapter)
+  // e.g. Talbert, Reading John, 145.
+  // e.g. Leyerle, "John Chrysostom," 162.
+  {
+    type: 'short-reference',
+    regex: new RegExp(
+      `^${PREFIX}${AUTHOR},\\s+(?:["“”'‘’][^"“”'‘’]+?["“”'‘’](?:,\\s*|\\s*)|[^,]+,\\s*)(?:[Pp]p?\\.\\s*)?\\d+[\\d\\s–-]*\\b\\.?`
+    )
+  },
+  // 5. Ibid. Reference
+  // e.g. Ibid., 145.
+  {
+    type: 'ibid-reference',
+    regex: new RegExp(
+      `^${PREFIX}[Ii]bid\\.(?:,\\s*(?:[Pp]p?\\.\\s*)?\\d+[\\d\\s–-]*\\b\\.?)?`
+    )
+  }
+];
+
+/**
+ * Detects character spans within footnote text that match SBL v2 bibliographic references.
+ * Support multi-citation separators (semicolons), parenthetical citations, and trailing commentary.
+ */
+export function detectSblReferences(text: string): SblReferenceSpan[] {
+  const spans: SblReferenceSpan[] = [];
+
+  function addSpan(start: number, end: number, type: string) {
+    // Check if this span is already covered by a larger or equal span
+    const isCovered = spans.some(s => start >= s.start && end <= s.end);
+    if (isCovered) return;
+
+    // Remove any existing smaller spans that are covered by this new larger span
+    for (let i = spans.length - 1; i >= 0; i--) {
+      const s = spans[i];
+      if (s.start >= start && s.end <= end) {
+        spans.splice(i, 1);
+      }
+    }
+
+    spans.push({ start, end, type });
+  }
+
+  // Split text by semicolons to check for individual citation segments
+  const semiRegex = /;/g;
+  let lastIdx = 0;
+  let match;
+  const segments: { text: string; start: number; end: number }[] = [];
+
+  while ((match = semiRegex.exec(text)) !== null) {
+    segments.push({
+      text: text.substring(lastIdx, match.index),
+      start: lastIdx,
+      end: match.index
+    });
+    lastIdx = match.index + 1;
+  }
+  segments.push({
+    text: text.substring(lastIdx),
+    start: lastIdx,
+    end: text.length
+  });
+
+  for (const seg of segments) {
+    const trimmed = seg.text.trim();
+    if (!trimmed) continue;
+    
+    const segmentTrimOffset = seg.text.indexOf(trimmed);
+    const trimStart = seg.start + segmentTrimOffset;
+
+    let matched = false;
+
+    // Check full trimmed segment
+    for (const pat of PATTERNS) {
+      const m = pat.regex.exec(trimmed);
+      if (m) {
+        const mStart = trimStart + m.index;
+        const mEnd = mStart + m[0].length;
+        addSpan(mStart, mEnd, pat.type);
+        matched = true;
+        break;
+      }
+    }
+
+    if (matched) continue;
+
+    // Check for inline prefixes (e.g. "see...", "cf...")
+    const prefixRegex = /\b(cf\.|see|see\s+also|e\.g\.,)\s+/gi;
+    let pMatch;
+    while ((pMatch = prefixRegex.exec(seg.text)) !== null) {
+      const rightText = seg.text.substring(pMatch.index).trim();
+      const rightStart = seg.start + pMatch.index;
+
+      for (const pat of PATTERNS) {
+        const m = pat.regex.exec(rightText);
+        if (m) {
+          const mStart = rightStart + m.index;
+          const mEnd = mStart + m[0].length;
+          addSpan(mStart, mEnd, pat.type);
+          matched = true;
+          break;
+        }
+      }
+      if (matched) break;
+    }
+
+    if (matched) continue;
+
+    // Check inside parentheses
+    const parenRegex = /\(([^)]+)\)/g;
+    let parenMatch;
+    while ((parenMatch = parenRegex.exec(seg.text)) !== null) {
+      const innerText = parenMatch[1].trim();
+      const innerStart = seg.start + parenMatch.index + parenMatch[0].indexOf(innerText);
+
+      for (const pat of PATTERNS) {
+        const m = pat.regex.exec(innerText);
+        if (m) {
+          const mStart = innerStart + m.index;
+          const mEnd = mStart + m[0].length;
+          addSpan(mStart, mEnd, pat.type);
+          matched = true;
+          break;
+        }
+      }
+      if (matched) continue;
+
+      let innerPMatch;
+      const innerPrefixRegex = /\b(cf\.|see|see\s+also|e\.g\.,)\s+/gi;
+      while ((innerPMatch = innerPrefixRegex.exec(innerText)) !== null) {
+        const rightInnerText = innerText.substring(innerPMatch.index).trim();
+        const rightInnerStart = innerStart + innerPMatch.index;
+
+        for (const pat of PATTERNS) {
+          const m = pat.regex.exec(rightInnerText);
+          if (m) {
+            const mStart = rightInnerStart + m.index;
+            const mEnd = mStart + m[0].length;
+            addSpan(mStart, mEnd, pat.type);
+            matched = true;
+            break;
+          }
+        }
+        if (matched) break;
+      }
+    }
+  }
+
+  return spans.sort((a, b) => a.start - b.start);
+}
+
+/**
+ * Checks if a specific index within the text falls inside any detected SBL reference spans.
+ */
+export function isWithinReference(index: number, spans: SblReferenceSpan[]): boolean {
+  return spans.some(s => index >= s.start && index < s.end);
+}
+
+/**
+ * Helper to determine if a footnote text contains any SBL reference spans.
+ */
+export function isSblReferenceFootnote(text: string): boolean {
+  return detectSblReferences(text).length > 0;
+}

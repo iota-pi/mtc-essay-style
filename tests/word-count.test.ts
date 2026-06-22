@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { countWords, countWordsInText } from "../src/analysis/word-count.js";
+import { countWords, countWordsInText, countFootnoteWords } from "../src/analysis/word-count.js";
 import { DocumentSections } from "../src/analysis/sections.js";
 import { ParsedDocument, DocxParagraph } from "../src/docx/types.js";
 
@@ -94,6 +94,55 @@ describe("Word Counting Utility", () => {
 
       // Total = bodyText + footnotes = 14 + 4 = 18 words
       expect(result.total).toBe(18);
+    });
+
+    it("should count footnote words excluding SBL bibliographic references but keeping prefixes", () => {
+      const doc: ParsedDocument = {
+        paragraphs: [],
+        footnotes: [
+          {
+            id: 1,
+            paragraphs: [createParagraph("For a full discussion, see Talbert, Reading John, 145.")]
+          },
+          {
+            id: 2,
+            paragraphs: [createParagraph("cf. Ibid., 145.")]
+          }
+        ],
+        styles: new Map()
+      };
+
+      const sections: DocumentSections = {
+        titlePage: [],
+        body: [createParagraph("Body text")],
+        bibliography: [],
+        hasTitlePage: false,
+        hasBibliography: false
+      };
+
+      const result = countWords(doc, sections);
+
+      // Footnote 1: "For a full discussion, see Talbert, Reading John, 145."
+      // Reference: "see Talbert, Reading John, 145."
+      // Prefix: "see"
+      // Non-reference words: "For a full discussion, see" = 5 words
+      // Footnote 2: "cf. Ibid., 145."
+      // Reference: "cf. Ibid., 145."
+      // Prefix: "cf."
+      // Non-reference words: "cf." = 1 word
+      // Total footnote words = 5 + 1 = 6 words
+      expect(result.footnotes).toBe(6);
+    });
+  });
+
+  describe("countFootnoteWords", () => {
+    it("should ignore citation words but count prefixes and prose", () => {
+      expect(countFootnoteWords("Charles H. Talbert, Reading John (New York: Crossroad, 1992), 127.")).toBe(0);
+      expect(countFootnoteWords("Talbert, Reading John, 145.")).toBe(0);
+      expect(countFootnoteWords("For discussion, see Talbert, Reading John, 145.")).toBe(3); // "For", "discussion,", "see" (3 words)
+      expect(countFootnoteWords("cf. Ibid., 145.")).toBe(1); // "cf." (1 word)
+      expect(countFootnoteWords("Some comment (see Talbert, Reading John, 145) here.")).toBe(4); // "Some", "comment", "(see", "here." (4 words)
+      expect(countFootnoteWords("Regular comments in a footnote.")).toBe(5);
     });
   });
 });
