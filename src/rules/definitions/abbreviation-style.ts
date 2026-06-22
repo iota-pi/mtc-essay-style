@@ -20,6 +20,8 @@ export const abbreviationStyleRule: StyleRule = {
     const etcRegex = /\b(etc\b\.?)/gi;
     const vizRegex = /\b(viz\b\.?)/gi;
     const caRegex = /\bca\b(?:\s+\d+)/gi; // ca followed by space and digit
+    const otRegex = /\bOld\s+Testament\b/gi;
+    const ntRegex = /\bNew\s+Testament\b/gi;
 
     const processText = (text: string, pIndex: number | undefined, region: DocumentRegion | undefined, footnoteId?: string) => {
       if (region === "title-page" || region === "bibliography") {
@@ -190,6 +192,46 @@ export const abbreviationStyleRule: StyleRule = {
           correction: {
             found: raw,
             expected: correct
+          },
+          paragraphSnippet: getParagraphSnippet(text)
+        });
+      }
+
+      // 8. Old Testament check
+      otRegex.lastIndex = 0;
+      while ((match = otRegex.exec(text)) !== null) {
+        const raw = match[0];
+        violations.push({
+          ruleId: abbreviationStyleRule.id,
+          ruleName: abbreviationStyleRule.name,
+          severity: "error",
+          message: "Use abbreviation 'OT' for 'Old Testament'",
+          paragraphIndex: pIndex,
+          region,
+          detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined,
+          correction: {
+            found: raw,
+            expected: "OT"
+          },
+          paragraphSnippet: getParagraphSnippet(text)
+        });
+      }
+
+      // 9. New Testament check
+      ntRegex.lastIndex = 0;
+      while ((match = ntRegex.exec(text)) !== null) {
+        const raw = match[0];
+        violations.push({
+          ruleId: abbreviationStyleRule.id,
+          ruleName: abbreviationStyleRule.name,
+          severity: "error",
+          message: "Use abbreviation 'NT' for 'New Testament'",
+          paragraphIndex: pIndex,
+          region,
+          detail: footnoteId ? `Footnote ID: ${footnoteId}` : undefined,
+          correction: {
+            found: raw,
+            expected: "NT"
           },
           paragraphSnippet: getParagraphSnippet(text)
         });

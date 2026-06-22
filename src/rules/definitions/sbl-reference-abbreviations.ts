@@ -94,18 +94,15 @@ export const sblReferenceAbbreviationsRule: StyleRule = {
         }
 
         const expectedNumber = isPlural ? "plural" : "singular";
-        const requiresAbbrev = isInsideParentheses(text, matchIndex) || footnoteId !== undefined;
+        const isSentenceStartOutside = (!isInsideParentheses(text, matchIndex) && footnoteId === undefined) && isSentenceStart(text, matchIndex);
 
         let expectedTerm: string;
-        if (requiresAbbrev) {
-          expectedTerm = expectedNumber === "plural" ? refTerm.pluralAbbrev : refTerm.singularAbbrev;
-        } else {
+        if (isSentenceStartOutside) {
           expectedTerm = expectedNumber === "plural" ? refTerm.pluralWord : refTerm.singularWord;
-          if (isSentenceStart(text, matchIndex)) {
-            expectedTerm = expectedTerm.charAt(0).toUpperCase() + expectedTerm.slice(1);
-          } else {
-            expectedTerm = expectedTerm.toLowerCase();
-          }
+          expectedTerm = expectedTerm.charAt(0).toUpperCase() + expectedTerm.slice(1);
+        } else {
+          expectedTerm = expectedNumber === "plural" ? refTerm.pluralAbbrev : refTerm.singularAbbrev;
+          expectedTerm = expectedTerm.toLowerCase();
         }
 
         const expectedText = expectedTerm + spacing + numberList;
@@ -125,12 +122,10 @@ export const sblReferenceAbbreviationsRule: StyleRule = {
             message = "Singular reference form used with a range or list of values";
           } else if (!isPlural && isMatchedPlural) {
             message = "Plural reference form used with a single value";
-          } else if (requiresAbbrev && !matchedTermWithDot.endsWith(".")) {
-            message = "Unabbreviated reference form used inside parentheses/footnotes";
-          } else if (!requiresAbbrev && matchedTermWithDot.endsWith(".")) {
-            message = "Abbreviated reference form used outside parentheses";
-          } else if (!requiresAbbrev && isSentenceStart(text, matchIndex) && matchedTermWithDot.charAt(0) !== matchedTermWithDot.charAt(0).toUpperCase()) {
-            message = "Lowercase reference form used at the start of a sentence";
+          } else if (isSentenceStartOutside && matchedTermWithDot.endsWith(".")) {
+            message = "Abbreviated reference form used at the start of a sentence";
+          } else if (!isSentenceStartOutside && !matchedTermWithDot.endsWith(".")) {
+            message = "Unabbreviated reference form used mid-sentence";
           }
 
 

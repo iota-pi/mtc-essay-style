@@ -116,6 +116,98 @@ export const SBL_VALID_ABBREVIATIONS = new Set<string>([
   "Sg Three", "Sus", "1 Macc", "2 Macc", "3 Macc", "4 Macc", "1 Esd", "2 Esd", "Pr Man", "Ps 151"
 ]);
 
+export const SBL_ABBREV_TO_FULL = new Map<string, string>([
+  ["gen", "Genesis"],
+  ["exod", "Exodus"],
+  ["lev", "Leviticus"],
+  ["num", "Numbers"],
+  ["deut", "Deuteronomy"],
+  ["josh", "Joshua"],
+  ["judg", "Judges"],
+  ["ruth", "Ruth"],
+  ["1 sam", "1 Samuel"],
+  ["2 sam", "2 Samuel"],
+  ["1 kgs", "1 Kings"],
+  ["2 kgs", "2 Kings"],
+  ["1 chr", "1 Chronicles"],
+  ["2 chr", "2 Chronicles"],
+  ["ezra", "Ezra"],
+  ["neh", "Nehemiah"],
+  ["esth", "Esther"],
+  ["job", "Job"],
+  ["ps", "Psalms"],
+  ["pss", "Psalms"],
+  ["prov", "Proverbs"],
+  ["eccl", "Ecclesiastes"],
+  ["qoh", "Qoheleth"],
+  ["song", "Song of Songs"],
+  ["cant", "Canticles"],
+  ["isa", "Isaiah"],
+  ["jer", "Jeremiah"],
+  ["lam", "Lamentations"],
+  ["ezek", "Ezekiel"],
+  ["dan", "Daniel"],
+  ["hos", "Hosea"],
+  ["joel", "Joel"],
+  ["amos", "Amos"],
+  ["obad", "Obadiah"],
+  ["jonah", "Jonah"],
+  ["mic", "Micah"],
+  ["nah", "Nahum"],
+  ["hab", "Habakkuk"],
+  ["zeph", "Zephaniah"],
+  ["hag", "Haggai"],
+  ["zech", "Zechariah"],
+  ["mal", "Malachi"],
+  ["matt", "Matthew"],
+  ["mark", "Mark"],
+  ["luke", "Luke"],
+  ["john", "John"],
+  ["acts", "Acts"],
+  ["rom", "Romans"],
+  ["1 cor", "1 Corinthians"],
+  ["2 cor", "2 Corinthians"],
+  ["gal", "Galatians"],
+  ["eph", "Ephesians"],
+  ["phil", "Philippians"],
+  ["col", "Colossians"],
+  ["1 thess", "1 Thessalonians"],
+  ["2 thess", "2 Thessalonians"],
+  ["1 tim", "1 Timothy"],
+  ["2 tim", "2 Timothy"],
+  ["titus", "Titus"],
+  ["phlm", "Philemon"],
+  ["heb", "Hebrews"],
+  ["jas", "James"],
+  ["1 pet", "1 Peter"],
+  ["2 pet", "2 Peter"],
+  ["1 john", "1 John"],
+  ["2 john", "2 John"],
+  ["3 john", "3 John"],
+  ["jude", "Jude"],
+  ["rev", "Revelation"],
+  ["tob", "Tobit"],
+  ["jdt", "Judith"],
+  ["add esth", "Additions to Esther"],
+  ["wis", "Wisdom of Solomon"],
+  ["sir", "Sirach"],
+  ["bar", "Baruch"],
+  ["ep jer", "Epistle of Jeremiah"],
+  ["add dan", "Additions to Daniel"],
+  ["pr azar", "Prayer of Azariah"],
+  ["bel", "Bel and the Dragon"],
+  ["sg three", "Song of the Three Young Men"],
+  ["sus", "Susanna"],
+  ["1 macc", "1 Maccabees"],
+  ["2 macc", "2 Maccabees"],
+  ["3 macc", "3 Maccabees"],
+  ["4 macc", "4 Maccabees"],
+  ["1 esd", "1 Esdras"],
+  ["2 esd", "2 Esdras"],
+  ["pr man", "Prayer of Manasseh"],
+  ["ps 151", "Psalm 151"]
+]);
+
 export const COMMON_WRONG_ABBREVIATIONS = new Map<string, string>([
   // Period versions
   ["gen.", "Gen"],
@@ -125,11 +217,8 @@ export const COMMON_WRONG_ABBREVIATIONS = new Map<string, string>([
   ["deut.", "Deut"],
   ["josh.", "Josh"],
   ["judg.", "Judg"],
-  ["ruth.", "Ruth"],
-  ["ezra.", "Ezra"],
   ["neh.", "Neh"],
   ["esth.", "Esth"],
-  ["job.", "Job"],
   ["ps.", "Ps"],
   ["pss.", "Pss"],
   ["prov.", "Prov"],
@@ -143,10 +232,6 @@ export const COMMON_WRONG_ABBREVIATIONS = new Map<string, string>([
   ["ezek.", "Ezek"],
   ["dan.", "Dan"],
   ["hos.", "Hos"],
-  ["joel.", "Joel"],
-  ["amos.", "Amos"],
-  ["obad.", "Obad"],
-  ["jonah.", "Jonah"],
   ["mic.", "Mic"],
   ["nah.", "Nah"],
   ["hab.", "Hab"],
@@ -155,51 +240,27 @@ export const COMMON_WRONG_ABBREVIATIONS = new Map<string, string>([
   ["zech.", "Zech"],
   ["mal.", "Mal"],
   ["matt.", "Matt"],
-  ["mark.", "Mark"],
-  ["luke.", "Luke"],
-  ["john.", "John"],
-  ["acts.", "Acts"],
   ["rom.", "Rom"],
   ["gal.", "Gal"],
   ["eph.", "Eph"],
   ["phil.", "Phil"],
   ["col.", "Col"],
-  ["titus.", "Titus"],
   ["phlm.", "Phlm"],
   ["heb.", "Heb"],
   ["jas.", "Jas"],
-  ["jude.", "Jude"],
   ["rev.", "Rev"],
   
   // Non-period but non-SBL
   ["ex", "Exod"],
-  ["ex.", "Exod"],
-  ["dt", "Deut"],
-  ["dt.", "Deut"],
-  ["mt", "Matt"],
-  ["mt.", "Matt"],
   ["mk", "Mark"],
-  ["mk.", "Mark"],
   ["lk", "Luke"],
-  ["lk.", "Luke"],
   ["jn", "John"],
-  ["jn.", "John"],
-  ["ro", "Rom"],
-  ["ro.", "Rom"],
-  ["co", "1 Cor / 2 Cor"], // ambiguous but wrong
-  ["ga", "Gal"],
-  ["ga.", "Gal"],
   ["php", "Phil"],
   ["php.", "Phil"],
-  ["ti", "1 Tim / 2 Tim / Titus"], // ambiguous but wrong
   ["phm", "Phlm"],
   ["phm.", "Phlm"],
-  ["he", "Heb"],
-  ["he.", "Heb"],
   ["apoc", "Rev"],
   ["apoc.", "Rev"],
-  ["re", "Rev"],
-  ["re.", "Rev"],
   
   // Numbered books wrong variants
   ["1sam", "1 Sam"],
@@ -299,105 +360,60 @@ export const COMMON_WRONG_ABBREVIATIONS = new Map<string, string>([
 
 const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-const sortedBookNames = Array.from(SBL_BOOK_MAP.keys())
-  .concat(Array.from(COMMON_WRONG_ABBREVIATIONS.keys()))
-  .concat(Array.from(SBL_VALID_ABBREVIATIONS).map(s => s.toLowerCase()))
-  .sort((a, b) => b.length - a.length);
+const bookNamesSet = new Set<string>();
+
+// 1. Add all standard book names in Title Case, lowercase, and uppercase
+for (const val of SBL_BOOK_MAP.values()) {
+  bookNamesSet.add(val); // e.g. "Gen", "1 Cor"
+  bookNamesSet.add(val.toLowerCase()); // e.g. "gen", "1 cor"
+  bookNamesSet.add(val.toUpperCase()); // e.g. "GEN", "1 COR"
+  
+  const full = SBL_ABBREV_TO_FULL.get(val.toLowerCase()) || val;
+  bookNamesSet.add(full); // e.g. "Genesis", "1 Corinthians"
+  bookNamesSet.add(full.toLowerCase()); // e.g. "genesis", "1 corinthians"
+  bookNamesSet.add(full.toUpperCase()); // e.g. "GENESIS", "1 CORINTHIANS"
+}
+
+// 2. Add all SBL valid abbreviations in their standard casing, lowercase, and uppercase
+for (const abbrev of SBL_VALID_ABBREVIATIONS) {
+  bookNamesSet.add(abbrev);
+  bookNamesSet.add(abbrev.toLowerCase());
+  bookNamesSet.add(abbrev.toUpperCase());
+}
+
+// Helper to capitalize first alphabetical character
+function capitalizeWrong(s: string): string {
+  const match = s.match(/[a-zA-Z]/);
+  if (match && match.index !== undefined) {
+    const idx = match.index;
+    return s.slice(0, idx) + s.charAt(idx).toUpperCase() + s.slice(idx + 1);
+  }
+  return s;
+}
+
+// 3. Add wrong abbreviations
+for (const wrong of COMMON_WRONG_ABBREVIATIONS.keys()) {
+  // If the wrong abbreviation is short and conflicts with English words/pronouns (like "ex", "mk", "lk", "jn"):
+  // we ONLY match it capitalized (e.g. "Ex", "Mk", "Lk", "Jn") or all-caps ("EX", "MK", "LK", "JN").
+  // We do NOT match it in lowercase (e.g. "ex", "mk", "lk", "jn").
+  const isShortConflict = ["ex", "mk", "lk", "jn"].includes(wrong.toLowerCase());
+  const capitalized = capitalizeWrong(wrong);
+  
+  if (isShortConflict) {
+    bookNamesSet.add(capitalized);
+    bookNamesSet.add(wrong.toUpperCase());
+  } else {
+    bookNamesSet.add(wrong);
+    bookNamesSet.add(capitalized);
+    bookNamesSet.add(wrong.toLowerCase());
+    bookNamesSet.add(wrong.toUpperCase());
+  }
+}
+
+const sortedBookNames = Array.from(bookNamesSet).sort((a, b) => b.length - a.length);
 
 export const BIBLE_BOOK_PATTERN = new RegExp(
   `\\b(?:${sortedBookNames.map(name => escapeRegExp(name)).join("|")})(?!\\w)`,
-  "gi"
+  "g"
 );
-
-export const SBL_ABBREV_TO_FULL = new Map<string, string>([
-  ["gen", "Genesis"],
-  ["exod", "Exodus"],
-  ["lev", "Leviticus"],
-  ["num", "Numbers"],
-  ["deut", "Deuteronomy"],
-  ["josh", "Joshua"],
-  ["judg", "Judges"],
-  ["ruth", "Ruth"],
-  ["1 sam", "1 Samuel"],
-  ["2 sam", "2 Samuel"],
-  ["1 kgs", "1 Kings"],
-  ["2 kgs", "2 Kings"],
-  ["1 chr", "1 Chronicles"],
-  ["2 chr", "2 Chronicles"],
-  ["ezra", "Ezra"],
-  ["neh", "Nehemiah"],
-  ["esth", "Esther"],
-  ["job", "Job"],
-  ["ps", "Psalms"],
-  ["pss", "Psalms"],
-  ["prov", "Proverbs"],
-  ["eccl", "Ecclesiastes"],
-  ["qoh", "Qoheleth"],
-  ["song", "Song of Songs"],
-  ["cant", "Canticles"],
-  ["isa", "Isaiah"],
-  ["jer", "Jeremiah"],
-  ["lam", "Lamentations"],
-  ["ezek", "Ezekiel"],
-  ["dan", "Daniel"],
-  ["hos", "Hosea"],
-  ["joel", "Joel"],
-  ["amos", "Amos"],
-  ["obad", "Obadiah"],
-  ["jonah", "Jonah"],
-  ["mic", "Micah"],
-  ["nah", "Nahum"],
-  ["hab", "Habakkuk"],
-  ["zeph", "Zephaniah"],
-  ["hag", "Haggai"],
-  ["zech", "Zechariah"],
-  ["mal", "Malachi"],
-  ["matt", "Matthew"],
-  ["mark", "Mark"],
-  ["luke", "Luke"],
-  ["john", "John"],
-  ["acts", "Acts"],
-  ["rom", "Romans"],
-  ["1 cor", "1 Corinthians"],
-  ["2 cor", "2 Corinthians"],
-  ["gal", "Galatians"],
-  ["eph", "Ephesians"],
-  ["phil", "Philippians"],
-  ["col", "Colossians"],
-  ["1 thess", "1 Thessalonians"],
-  ["2 thess", "2 Thessalonians"],
-  ["1 tim", "1 Timothy"],
-  ["2 tim", "2 Timothy"],
-  ["titus", "Titus"],
-  ["phlm", "Philemon"],
-  ["heb", "Hebrews"],
-  ["jas", "James"],
-  ["1 pet", "1 Peter"],
-  ["2 pet", "2 Peter"],
-  ["1 john", "1 John"],
-  ["2 john", "2 John"],
-  ["3 john", "3 John"],
-  ["jude", "Jude"],
-  ["rev", "Revelation"],
-  ["tob", "Tobit"],
-  ["jdt", "Judith"],
-  ["add esth", "Additions to Esther"],
-  ["wis", "Wisdom of Solomon"],
-  ["sir", "Sirach"],
-  ["bar", "Baruch"],
-  ["ep jer", "Epistle of Jeremiah"],
-  ["add dan", "Additions to Daniel"],
-  ["pr azar", "Prayer of Azariah"],
-  ["bel", "Bel and the Dragon"],
-  ["sg three", "Song of the Three Young Men"],
-  ["sus", "Susanna"],
-  ["1 macc", "1 Maccabees"],
-  ["2 macc", "2 Maccabees"],
-  ["3 macc", "3 Maccabees"],
-  ["4 macc", "4 Maccabees"],
-  ["1 esd", "1 Esdras"],
-  ["2 esd", "2 Esdras"],
-  ["pr man", "Prayer of Manasseh"],
-  ["ps 151", "Psalm 151"]
-]);
 

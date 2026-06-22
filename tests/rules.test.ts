@@ -15,6 +15,7 @@ import { bibleConsecutiveRefsRule } from "../src/rules/definitions/bible-consecu
 import { bibleRangeEndashRule } from "../src/rules/definitions/bible-range-endash.js";
 import { bodyEndashRule } from "../src/rules/definitions/body-endash.js";
 import { sblReferenceAbbreviationsRule } from "../src/rules/definitions/sbl-reference-abbreviations.js";
+import { greekHebrewQuotesRule } from "../src/rules/definitions/greek-hebrew-quotes.js";
 
 describe("Rule 1: Bible References in Footnotes", () => {
   it("should flag Bible references inside footnotes", () => {
@@ -200,12 +201,12 @@ describe("Rule 3: Bible Book Name Abbreviations", () => {
     const violations = bibleBookAbbreviationsRule.check(context);
 
     expect(violations.length).toBe(2);
-    expect(violations[0].message).toBe("Incorrect Bible book abbreviation inside parentheses");
+    expect(violations[0].message).toBe("Use SBL book abbreviation inside parentheses");
     expect(violations[0].correction?.found).toBe("Gen. 1:1");
     expect(violations[0].correction?.expected).toBe("Gen 1:1");
-    expect(violations[1].message).toBe("Incorrect Bible book form in running text");
+    expect(violations[1].message).toBe("Use SBL book abbreviation in running text when cited with chapter/verse");
     expect(violations[1].correction?.found).toBe("Matt. 5:3");
-    expect(violations[1].correction?.expected).toBe("Matthew 5:3");
+    expect(violations[1].correction?.expected).toBe("Matt 5:3");
   });
 
   it("should flag non-SBL book abbreviations", () => {
@@ -223,10 +224,10 @@ describe("Rule 3: Bible Book Name Abbreviations", () => {
     const violations = bibleBookAbbreviationsRule.check(context);
 
     expect(violations.length).toBe(2);
-    expect(violations[0].message).toBe("Incorrect Bible book abbreviation inside parentheses");
+    expect(violations[0].message).toBe("Use SBL book abbreviation inside parentheses");
     expect(violations[0].correction?.found).toBe("Ex 20:1");
     expect(violations[0].correction?.expected).toBe("Exod 20:1");
-    expect(violations[1].message).toBe("Incorrect Bible book form in running text");
+    expect(violations[1].message).toBe("Use SBL book abbreviation in running text when cited with chapter/verse");
     expect(violations[1].correction?.found).toBe("Mk 1:1");
     expect(violations[1].correction?.expected).toBe("Mark 1:1");
   });
@@ -253,10 +254,10 @@ describe("Rule 3: Bible Book Name Abbreviations", () => {
     expect(violations[0].correction?.expected).toBe("Gen 1:1");
   });
 
-  it("should flag abbreviations in running text", () => {
+  it("should flag abbreviations in running text when cited without chapter/verse", () => {
     const doc = createTestDocument({
       paragraphs: [
-        createTestParagraph("According to Gen 1:1, it states this.")
+        createTestParagraph("According to Gen, it states this.")
       ]
     });
     const sections: DocumentSections = {
@@ -270,15 +271,40 @@ describe("Rule 3: Bible Book Name Abbreviations", () => {
     const violations = bibleBookAbbreviationsRule.check(context);
 
     expect(violations.length).toBe(1);
-    expect(violations[0].message).toBe("Use full Bible book name in running text");
+    expect(violations[0].message).toBe("Use spelled out book name in running text when cited without chapter/verse");
+    expect(violations[0].correction?.found).toBe("Gen");
+    expect(violations[0].correction?.expected).toBe("Genesis");
+  });
+
+  it("should flag abbreviated/un-spelled out book names at sentence start", () => {
+    const doc = createTestDocument({
+      paragraphs: [
+        createTestParagraph("Gen 1:1 is a key verse. 1 Cor 5:6 is another.")
+      ]
+    });
+    const sections: DocumentSections = {
+      titlePage: [],
+      body: doc.paragraphs,
+      bibliography: [],
+      hasTitlePage: false,
+      hasBibliography: false
+    };
+    const context = createTestContext(doc, sections);
+    const violations = bibleBookAbbreviationsRule.check(context);
+
+    expect(violations.length).toBe(2);
+    expect(violations[0].message).toBe("Use spelled out book name at the start of a sentence");
     expect(violations[0].correction?.found).toBe("Gen 1:1");
     expect(violations[0].correction?.expected).toBe("Genesis 1:1");
+    expect(violations[1].message).toBe("Use spelled out book name at the start of a sentence");
+    expect(violations[1].correction?.found).toBe("1 Cor 5:6");
+    expect(violations[1].correction?.expected).toBe("First Corinthians 5:6");
   });
 
   it("should pass correct SBL book abbreviations/names and un-abbreviated books", () => {
     const doc = createTestDocument({
       paragraphs: [
-        createTestParagraph("In Genesis 1:1, we read (Gen 1:1). Ruth 1:1 and (Ruth 1:1) both pass.")
+        createTestParagraph("Genesis 1:1 is a key verse. In the middle of a sentence, we write Gen 1:1. We can also write Genesis as a book name on its own.")
       ]
     });
     const sections: DocumentSections = {
@@ -313,6 +339,49 @@ describe("Rule 3: Bible Book Name Abbreviations", () => {
     const context = createTestContext(doc, sections);
     const violations = bibleBookAbbreviationsRule.check(context);
     expect(violations.length).toBe(0);
+  });
+
+  it("should not flag common English words or pronouns that conflict with wrong abbreviations", () => {
+    const doc = createTestDocument({
+      paragraphs: [
+        createTestParagraph("Second, he argues that the new covenant has been established. He is correct. We read the book of Acts. She visited her ex-spouse and they decided to co-operate.")
+      ]
+    });
+    const sections: DocumentSections = {
+      titlePage: [],
+      body: doc.paragraphs,
+      bibliography: [],
+      hasTitlePage: false,
+      hasBibliography: false
+    };
+    const context = createTestContext(doc, sections);
+    const violations = bibleBookAbbreviationsRule.check(context);
+
+    expect(violations.length).toBe(0);
+  });
+
+  it("should ignore lowercase 'mark' unless followed by a reference number", () => {
+    const doc = createTestDocument({
+      paragraphs: [
+        createTestParagraph("Make a mark on the page. We read mark 1:1 and we see mark 1 in the text.")
+      ]
+    });
+    const sections: DocumentSections = {
+      titlePage: [],
+      body: doc.paragraphs,
+      bibliography: [],
+      hasTitlePage: false,
+      hasBibliography: false
+    };
+    const context = createTestContext(doc, sections);
+    const violations = bibleBookAbbreviationsRule.check(context);
+
+    // It should flag "mark 1:1" and "mark 1", but NOT "mark on the page"
+    expect(violations.length).toBe(2);
+    expect(violations[0].correction?.found).toBe("mark 1:1");
+    expect(violations[0].correction?.expected).toBe("Mark 1:1");
+    expect(violations[1].correction?.found).toBe("mark 1");
+    expect(violations[1].correction?.expected).toBe("Mark 1");
   });
 });
 
@@ -385,7 +454,29 @@ describe("Rule 4: Abbreviation Punctuation and Capitalisation", () => {
     const context = createTestContext(doc, sections);
     const violations = abbreviationStyleRule.check(context);
 
-    expect(violations.length).toBe(0);
+  });
+
+  it("should flag Old Testament and New Testament to suggest OT and NT", () => {
+    const doc = createTestDocument({
+      paragraphs: [
+        createTestParagraph("The Old Testament has many books. Similarly, the New Testament has many.")
+      ]
+    });
+    const sections: DocumentSections = {
+      titlePage: [],
+      body: doc.paragraphs,
+      bibliography: [],
+      hasTitlePage: false,
+      hasBibliography: false
+    };
+    const context = createTestContext(doc, sections);
+    const violations = abbreviationStyleRule.check(context);
+
+    expect(violations.length).toBe(2);
+    expect(violations[0].correction?.found).toBe("Old Testament");
+    expect(violations[0].correction?.expected).toBe("OT");
+    expect(violations[1].correction?.found).toBe("New Testament");
+    expect(violations[1].correction?.expected).toBe("NT");
   });
 });
 
@@ -901,22 +992,22 @@ describe("Rule 11: Body Text En-dash Check", () => {
 });
 
 describe("Rule 12: SBL Reference Abbreviations", () => {
-  it("should flag abbreviated forms outside parentheses", () => {
+  it("should flag unabbreviated forms outside parentheses mid-sentence", () => {
     const doc = createTestDocument({
-      paragraphs: [createTestParagraph("In v. 3 we read this.")]
+      paragraphs: [createTestParagraph("In verse 3 we read this.")]
     });
     const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
     const context = createTestContext(doc, sections);
     const violations = sblReferenceAbbreviationsRule.check(context);
     expect(violations.length).toBe(1);
-    expect(violations[0].message).toContain("Abbreviated reference form used outside parentheses");
-    expect(violations[0].correction?.found).toBe("v. 3");
-    expect(violations[0].correction?.expected).toBe("verse 3");
+    expect(violations[0].message).toContain("Unabbreviated reference form used mid-sentence");
+    expect(violations[0].correction?.found).toBe("verse 3");
+    expect(violations[0].correction?.expected).toBe("v. 3");
   });
 
-  it("should pass capitalised full word at sentence start and lowercase full word mid-sentence outside parentheses", () => {
+  it("should pass capitalised full word at sentence start and abbreviated form mid-sentence outside parentheses", () => {
     const doc = createTestDocument({
-      paragraphs: [createTestParagraph("Verse 3 says this. Yes, verse 3 is key.")]
+      paragraphs: [createTestParagraph("Verse 3 says this. Yes, v. 3 is key.")]
     });
     const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
     const context = createTestContext(doc, sections);
@@ -944,7 +1035,7 @@ describe("Rule 12: SBL Reference Abbreviations", () => {
     const context = createTestContext(doc, sections);
     const violations = sblReferenceAbbreviationsRule.check(context);
     expect(violations.length).toBe(1);
-    expect(violations[0].message).toContain("Unabbreviated reference form used inside parentheses/footnotes");
+    expect(violations[0].message).toContain("Unabbreviated reference form used mid-sentence");
     expect(violations[0].correction?.found).toBe("verse 3");
     expect(violations[0].correction?.expected).toBe("v. 3");
   });
@@ -1010,6 +1101,57 @@ describe("Rule 12: SBL Reference Abbreviations", () => {
     const context = createTestContext(doc, sections);
     const violations = sblReferenceAbbreviationsRule.check(context);
     expect(violations.length).toBe(0);
+  });
+});
+
+describe("Rule 13: Greek and Hebrew Quotes Check", () => {
+  it("should flag Greek and Hebrew words inside quote marks", () => {
+    const doc = createTestDocument({
+      paragraphs: [
+        createTestParagraph("We look at the word “λόγος”. Also look at ‘בראשית’ and \"בראשית\" and 'λόγος'.")
+      ]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = greekHebrewQuotesRule.check(context);
+
+    expect(violations.length).toBe(4);
+    expect(violations[0].correction?.found).toBe("“λόγος”");
+    expect(violations[0].correction?.expected).toBe("λόγος");
+    expect(violations[1].correction?.found).toBe("‘בראשית’");
+    expect(violations[1].correction?.expected).toBe("בראשית");
+    expect(violations[2].correction?.found).toBe("\"בראשית\"");
+    expect(violations[2].correction?.expected).toBe("בראשית");
+    expect(violations[3].correction?.found).toBe("'λόγος'");
+    expect(violations[3].correction?.expected).toBe("λόγος");
+  });
+
+  it("should not flag English quotes containing Greek or Hebrew words", () => {
+    const doc = createTestDocument({
+      paragraphs: [
+        createTestParagraph("He said, “The word is λόγος.” In the beginning of ‘Hebrew: בראשית’ we see this.")
+      ]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = greekHebrewQuotesRule.check(context);
+
+    expect(violations.length).toBe(0);
+  });
+
+  it("should flag Greek and Hebrew words in nested quotations", () => {
+    const doc = createTestDocument({
+      paragraphs: [
+        createTestParagraph("He said, “The Greek word is ‘λόγος’ in this passage.”")
+      ]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = greekHebrewQuotesRule.check(context);
+
+    expect(violations.length).toBe(1);
+    expect(violations[0].correction?.found).toBe("‘λόγος’");
+    expect(violations[0].correction?.expected).toBe("λόγος");
   });
 });
 
