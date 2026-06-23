@@ -5,7 +5,35 @@ export interface SblReferenceSpan {
 }
 
 // Common SBL reference prefixes
-const PREFIX = '(?:(?:[Cc]f\\.|[Ss]ee\\s+also:?|[Ss]ee:?|[Ee]\\.g\\.,|[Ii]\\.e\\.,?)\\s+)?';
+const PREFIX_PATTERNS = [
+  'cf\\.',
+  'see\\s+also:?',
+  'see\\s+esp\\.?',
+  'see\\s+especially',
+  'see\\s+e\\.g\\.,',
+  'see,?\\s+esp\\.?,?',
+  'see,?\\s+e\\.g\\.,?',
+  'see:?',
+  'e\\.g\\.,',
+  'i\\.e\\.,?',
+  'contra',
+  'following',
+  'so',
+  'similarly',
+  'esp\\.',
+  'especially',
+  'also',
+  'according\\s+to',
+  'as\\s+argued\\s+(?:in|by)',
+  'as\\s+discussed\\s+in',
+  'as\\s+noted\\s+(?:in|by)',
+  'quoted\\s+in',
+  'cited\\s+in'
+];
+
+const PREFIX_GROUP = PREFIX_PATTERNS.join('|');
+export const SBL_PREFIX_REGEX_STR = `(?:(?:${PREFIX_GROUP})\\s+)`;
+const PREFIX = `(?:${SBL_PREFIX_REGEX_STR})?`;
 
 // Author name pattern (capitalized names, initials, optional 'and', '&', commas, 'et al.')
 const AUTHOR = `[A-Z][A-Za-z\\s\\.&\\’'-]+(?:,\\s+(?:and\\s+)?[A-Z][A-Za-z\\s\\.&\\’'-]+)*(?:\\s+et\\s+al\\.)?`;
@@ -141,7 +169,7 @@ export function detectSblReferences(text: string): SblReferenceSpan[] {
     if (matched) continue;
 
     // Check for inline prefixes (e.g. "see...", "cf...")
-    const prefixRegex = /\b(cf\.|see\s+also:?|see:?|e\.g\.,|i\.e\.,?)\s+/gi;
+    const prefixRegex = new RegExp(`\\b(${PREFIX_GROUP})\\s+`, 'gi');
     let pMatch;
     while ((pMatch = prefixRegex.exec(seg.text)) !== null) {
       const rightText = seg.text.substring(pMatch.index).trim();
@@ -182,7 +210,7 @@ export function detectSblReferences(text: string): SblReferenceSpan[] {
       if (matched) continue;
 
       let innerPMatch;
-      const innerPrefixRegex = /\b(cf\.|see\s+also:?|see:?|e\.g\.,|i\.e\.,?)\s+/gi;
+      const innerPrefixRegex = new RegExp(`\\b(${PREFIX_GROUP})\\s+`, 'gi');
       while ((innerPMatch = innerPrefixRegex.exec(innerText)) !== null) {
         const rightInnerText = innerText.substring(innerPMatch.index).trim();
         const rightInnerStart = innerStart + innerPMatch.index;

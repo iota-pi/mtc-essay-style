@@ -1,7 +1,6 @@
 import { DocumentSections } from "./sections.js";
 import { ParsedDocument, DocxParagraph } from "../docx/types.js";
-import { detectSblReferences } from "../rules/sbl-reference-detector.js";
-
+import { detectSblReferences, SBL_PREFIX_REGEX_STR } from "../rules/sbl-reference-detector.js";
 export interface WordCountResult {
   total: number;          // body + footnotes (excludes title page & bibliography)
   bodyText: number;       // word count of body paragraphs only
@@ -44,7 +43,7 @@ export function countFootnoteWords(text: string): number {
   }
 
   // Get ignored spans, excluding prefixes
-  const prefixRegex = /^((?:cf\.|see\s+also:?|see:?|e\.g\.,|i\.e\.,?)\s+)/i;
+  const prefixRegex = new RegExp('^(' + SBL_PREFIX_REGEX_STR + ')', 'i');
   const chars = text.split("");
 
   for (const span of spans) {

@@ -60,8 +60,34 @@ describe("SBL v2 Reference Detector", () => {
       }
     });
 
-    it("should detect references with prefixes (cf., see, see also, e.g.,)", () => {
-      const prefixes = ["cf. ", "see ", "see also ", "e.g., "];
+    it("should detect references with prefixes (cf., see, see also, e.g., contra, following, so, similarly, etc.)", () => {
+      const prefixes = [
+        "cf. ",
+        "see ",
+        "see also ",
+        "see esp. ",
+        "see especially ",
+        "see e.g., ",
+        "see, esp. ",
+        "see, e.g., ",
+        "e.g., ",
+        "i.e., ",
+        "contra ",
+        "following ",
+        "so ",
+        "similarly ",
+        "esp. ",
+        "especially ",
+        "also ",
+        "according to ",
+        "as argued in ",
+        "as argued by ",
+        "as discussed in ",
+        "as noted in ",
+        "as noted by ",
+        "quoted in ",
+        "cited in "
+      ];
       for (const prefix of prefixes) {
         const text = `${prefix}Talbert, Reading John, 145.`;
         const spans = detectSblReferences(text);

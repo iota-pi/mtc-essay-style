@@ -148,6 +148,8 @@ describe("Word Counting Utility", () => {
       expect(countFootnoteWords("Thomas R. Schreiner, “Baptism in the Epistles,” in Believer’s Baptism: Sign of the New Covenant in Christ, NAC Studies in Bible and Theology (Broadman & Holman Publishers, 2006), 77, 93; Schreiner and Wright, “Introduction,” 7.")).toBe(0);
       expect(countFootnoteWords("See also Thomas, A Case for Mixed-Audience with Reference to the Warning Passages in the Book of Hebrews, 181–272.")).toBe(2);
       expect(countFootnoteWords("Thomas, A Case for Mixed-Audience with Reference to the Warning Passages in the Book of Hebrews, 181–272.")).toBe(0);
+      expect(countFootnoteWords("For a defence of Jer 32 as a new covenant text, see Paul R. Williamson, Sealed with an Oath: Covenant in God’s Unfolding Purpose, New Studies in Biblical Theology 23 (Apollos[u.a.], 2007), 164–65.")).toBe(12);
+      expect(countFootnoteWords("For a defence of Jer 32 as a new covenant text, contra Paul R. Williamson, Sealed with an Oath: Covenant in God’s Unfolding Purpose, New Studies in Biblical Theology 23 (Apollos[u.a.], 2007), 164–65.")).toBe(12);
 
       // Extra user requested test cases
       expect(countFootnoteWords("Gentry and Wellum, Kingdom through Covenant, 555; see also: Fred A. Malone, The Baptism of Disciples Alone: A Covenantal Argument for Credobaptism versus Paedobaptism, Rev. and expanded, 2nd ed. (Founders Press, 2007), 72–76.")).toBe(2);
