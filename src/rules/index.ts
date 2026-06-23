@@ -12,6 +12,7 @@ import { bibleRangeEndashRule } from "./definitions/bible-range-endash.js";
 import { bodyEndashRule } from "./definitions/body-endash.js";
 import { sblReferenceAbbreviationsRule } from "./definitions/sbl-reference-abbreviations.js";
 import { greekHebrewQuotesRule } from "./definitions/greek-hebrew-quotes.js";
+import { quotationEllipsisRule } from "./definitions/quotation-ellipsis.js";
 
 // Import and register all style rules.
 export const defaultRegistry = new RuleRegistry();
@@ -28,7 +29,8 @@ defaultRegistry.registerAll([
   bibleRangeEndashRule,
   bodyEndashRule,
   sblReferenceAbbreviationsRule,
-  greekHebrewQuotesRule
+  greekHebrewQuotesRule,
+  quotationEllipsisRule
 ]);
 
 export { RuleRegistry } from "./registry.js";

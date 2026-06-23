@@ -24,51 +24,76 @@ export const fontSizeRule: StyleRule = {
         continue;
       }
 
-      const nonCompliantSizes = new Set<number>();
+            interface NonCompliantSegment {
+        text: string;
+        size: number;
+      }
+      const segments: NonCompliantSegment[] = [];
+      let currentSegment: NonCompliantSegment | null = null;
       
       for (const run of para.runs) {
-        // Skip empty or purely whitespace runs
         if (run.text.trim() === "") {
+          if (currentSegment) {
+            currentSegment.text += run.text;
+          }
           continue;
         }
 
-        // Skip footnote references (they are typically superscript/smaller)
         if (run.footnoteId !== undefined) {
+          if (currentSegment) {
+            segments.push(currentSegment);
+            currentSegment = null;
+          }
           continue;
         }
 
         const resolved = context.resolveRunProperties(run, para);
-        const size = resolved.fontSize; // in half-points (24 = 12pt)
+        const size = resolved.fontSize;
 
-        if (size !== 24) {
-          const defaultSize = doc.defaultRunProperties?.fontSize ||
-                              doc.styles.get("Normal")?.runProperties?.fontSize ||
-                              doc.styles.get("normal")?.runProperties?.fontSize;
-          
-          if (size === undefined && defaultSize === 24) {
-            continue;
+        const defaultSize = doc.defaultRunProperties?.fontSize ||
+                            doc.styles.get("Normal")?.runProperties?.fontSize ||
+                            doc.styles.get("normal")?.runProperties?.fontSize;
+        
+        const isCompliant = size === 24 || (size === undefined && defaultSize === 24);
+
+        if (!isCompliant) {
+          const runSize = size !== undefined ? size / 2 : 0;
+          if (currentSegment && currentSegment.size === runSize) {
+            currentSegment.text += run.text;
+          } else {
+            if (currentSegment) {
+              segments.push(currentSegment);
+            }
+            currentSegment = { text: run.text, size: runSize };
           }
-
-          nonCompliantSizes.add(size !== undefined ? size / 2 : 0);
+        } else {
+          if (currentSegment) {
+            segments.push(currentSegment);
+            currentSegment = null;
+          }
         }
       }
+      if (currentSegment) {
+        segments.push(currentSegment);
+      }
 
-      if (nonCompliantSizes.size > 0) {
+      if (segments.length > 0) {
         const pIndex = findParagraphIndex(para, doc);
-        const sizesStr = Array.from(nonCompliantSizes)
-          .map(s => (s === 0 ? "default" : `${s}pt`))
-          .join(", ");
-        const actualText = getParagraphText(para);
-        const snippet = actualText.length > 50 ? actualText.substring(0, 50) + "..." : actualText;
+        const segmentDescriptions = segments.map(seg => {
+          const textToAbridge = seg.text.trim();
+          const abridgedText = textToAbridge.length > 25 ? textToAbridge.substring(0, 25).trimEnd() + "..." : textToAbridge;
+          const sizeStr = seg.size === 0 ? "default size" : `${seg.size}pt`;
+          return `"${abridgedText}" (${sizeStr})`;
+        });
 
         violations.push({
           ruleId: this.id,
           ruleName: this.name,
           severity: "error",
-          message: `Paragraph contains text that is not 12pt (found: ${sizesStr}). All body text must be exactly 12pt.`,
+          message: `Paragraph contains text that is not 12pt: ${segmentDescriptions.join(", ")}. All body text must be exactly 12pt.`,
           paragraphIndex: pIndex,
           region: "body",
-          detail: `Snippet: "${snippet}"`
+          detail: `Non-compliant text: ${segments.map(s => `"${s.text}"`).join(", ")}`
         });
       }
     }

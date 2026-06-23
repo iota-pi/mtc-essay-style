@@ -5,7 +5,7 @@ export interface SblReferenceSpan {
 }
 
 // Common SBL reference prefixes
-const PREFIX = '(?:(?:[Cc]f\\.|[Ss]ee|[Ss]ee\\s+also|[Ee]\\.g\\.,)\\s+)?';
+const PREFIX = '(?:(?:[Cc]f\\.|[Ss]ee\\s+also:?|[Ss]ee:?|[Ee]\\.g\\.,|[Ii]\\.e\\.,?)\\s+)?';
 
 // Author name pattern (capitalized names, initials, optional 'and', '&', commas, 'et al.')
 const AUTHOR = `[A-Z][A-Za-z\\s\\.&\\’'-]+(?:,\\s+(?:and\\s+)?[A-Z][A-Za-z\\s\\.&\\’'-]+)*(?:\\s+et\\s+al\\.)?`;
@@ -16,7 +16,7 @@ const PATTERNS = [
   {
     type: 'chapter-first',
     regex: new RegExp(
-      `^${PREFIX}${AUTHOR},\\s+["“”'‘’][^"“”'‘’]+?["“”'‘’],?\\s+[Ii]n\\s+[^,]+,\\s*(?:[Ee]d\\.|[Tt]rans\\.|[Ee]dited\\s+by)\\s+[^(\\n]+\\((?:[^)]+?:\\s*)?[^)]*?\\d{4}\\),\\s*(?:[Pp]p?\\.\\s*)?\\d+[\\d\\s–-]*\\b\\.?`
+      `^${PREFIX}${AUTHOR},\\s+["“”'‘’][^"“”'‘’]+?["“”'‘’],?\\s+[Ii]n\\s+[^,]+,\\s*(?:[Ee]d\\.|[Tt]rans\\.|[Ee]dited\\s+by)\\s+[^(\\n]+\\((?:[^)]+?:\\s*)?[^)]*?\\d{4}\\),\\s*(?:[Pp]p?\\.\\s*)?\\d+[\\d\\s–,-]*\\b\\.?`
     )
   },
   // 2. Journal Article (First Reference)
@@ -24,7 +24,7 @@ const PATTERNS = [
   {
     type: 'journal-first',
     regex: new RegExp(
-      `^${PREFIX}${AUTHOR},\\s+["“”'‘’][^"“”'‘’]+?["“”'‘’],?\\s+[^(\\n]+\\s+\\d+(?:\\.\\d+)?\\s*\\(\\d{4}\\):\\s*\\d+[\\d\\s–-]*\\b\\.?`
+      `^${PREFIX}${AUTHOR},\\s+["“”'‘’][^"“”'‘’]+?["“”'‘’],?\\s+[^(\\n]+\\s+\\d+(?:\\.\\d+)?\\s*\\(\\d{4}\\):\\s*\\d+[\\d\\s–,-]*\\b\\.?`
     )
   },
   // 3. Book (First Reference)
@@ -32,7 +32,7 @@ const PATTERNS = [
   {
     type: 'book-first',
     regex: new RegExp(
-      `^${PREFIX}${AUTHOR},\\s+[^(\\n]+\\((?:[^)]+?:\\s*)?[^)]*?\\d{4}\\),\\s*(?:[Pp]p?\\.\\s*)?\\d+[\\d\\s–-]*\\b\\.?`
+      `^${PREFIX}${AUTHOR},\\s+[^(\\n]+\\((?:[^)]+?:\\s*)?[^)]*?\\d{4}\\),\\s*(?:[Pp]p?\\.\\s*)?\\d+[\\d\\s–,-]*\\b\\.?`
     )
   },
   // 4. Short / Subsequent Reference (Book, Journal, or Chapter)
@@ -41,7 +41,7 @@ const PATTERNS = [
   {
     type: 'short-reference',
     regex: new RegExp(
-      `^${PREFIX}${AUTHOR},\\s+(?:["“”'‘’][^"“”'‘’]+?["“”'‘’](?:,\\s*|\\s*)|[^,]+,\\s*)(?:[Pp]p?\\.\\s*)?\\d+[\\d\\s–-]*\\b\\.?`
+      `^${PREFIX}${AUTHOR},\\s+(?:["“”'‘’][^"“”'‘’]+?["“”'‘’](?:,\\s*|\\s*)|[^,]+,\\s*)(?:[Pp]p?\\.\\s*)?\\d+[\\d\\s–,-]*\\b\\.?`
     )
   },
   // 5. Ibid. Reference
@@ -49,7 +49,7 @@ const PATTERNS = [
   {
     type: 'ibid-reference',
     regex: new RegExp(
-      `^${PREFIX}[Ii]bid\\.(?:,\\s*(?:[Pp]p?\\.\\s*)?\\d+[\\d\\s–-]*\\b\\.?)?`
+      `^${PREFIX}[Ii]bid\\.(?:,\\s*(?:[Pp]p?\\.\\s*)?\\d+[\\d\\s–,-]*\\b\\.?)?`
     )
   }
 ];
@@ -77,19 +77,39 @@ export function detectSblReferences(text: string): SblReferenceSpan[] {
     spans.push({ start, end, type });
   }
 
-  // Split text by semicolons to check for individual citation segments
-  const semiRegex = /;/g;
-  let lastIdx = 0;
-  let match;
-  const segments: { text: string; start: number; end: number }[] = [];
+  // Find valid citation separators (semicolons not inside parentheses or quotes)
+  const separators: number[] = [];
+  let parenDepth = 0;
+  let inDoubleQuotes = false;
+  let inSingleQuotes = false;
 
-  while ((match = semiRegex.exec(text)) !== null) {
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '(') {
+      parenDepth++;
+    } else if (c === ')') {
+      if (parenDepth > 0) parenDepth--;
+    } else if (c === '“' || c === '”' || c === '"') {
+      inDoubleQuotes = !inDoubleQuotes;
+    } else if (c === '‘' || c === '’' || c === '\'') {
+      const isApostrophe = (i > 0 && /\w/.test(text[i-1])) && (i < text.length - 1 && /\w/.test(text[i+1]));
+      if (!isApostrophe) {
+        inSingleQuotes = !inSingleQuotes;
+      }
+    } else if (c === ';' && parenDepth === 0 && !inDoubleQuotes && !inSingleQuotes) {
+      separators.push(i);
+    }
+  }
+
+  const segments: { text: string; start: number; end: number }[] = [];
+  let lastIdx = 0;
+  for (const sep of separators) {
     segments.push({
-      text: text.substring(lastIdx, match.index),
+      text: text.substring(lastIdx, sep),
       start: lastIdx,
-      end: match.index
+      end: sep
     });
-    lastIdx = match.index + 1;
+    lastIdx = sep + 1;
   }
   segments.push({
     text: text.substring(lastIdx),
@@ -121,7 +141,7 @@ export function detectSblReferences(text: string): SblReferenceSpan[] {
     if (matched) continue;
 
     // Check for inline prefixes (e.g. "see...", "cf...")
-    const prefixRegex = /\b(cf\.|see|see\s+also|e\.g\.,)\s+/gi;
+    const prefixRegex = /\b(cf\.|see\s+also:?|see:?|e\.g\.,|i\.e\.,?)\s+/gi;
     let pMatch;
     while ((pMatch = prefixRegex.exec(seg.text)) !== null) {
       const rightText = seg.text.substring(pMatch.index).trim();
@@ -162,7 +182,7 @@ export function detectSblReferences(text: string): SblReferenceSpan[] {
       if (matched) continue;
 
       let innerPMatch;
-      const innerPrefixRegex = /\b(cf\.|see|see\s+also|e\.g\.,)\s+/gi;
+      const innerPrefixRegex = /\b(cf\.|see\s+also:?|see:?|e\.g\.,|i\.e\.,?)\s+/gi;
       while ((innerPMatch = innerPrefixRegex.exec(innerText)) !== null) {
         const rightInnerText = innerText.substring(innerPMatch.index).trim();
         const rightInnerStart = innerStart + innerPMatch.index;

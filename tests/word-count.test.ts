@@ -143,6 +143,18 @@ describe("Word Counting Utility", () => {
       expect(countFootnoteWords("cf. Ibid., 145.")).toBe(1); // "cf." (1 word)
       expect(countFootnoteWords("Some comment (see Talbert, Reading John, 145) here.")).toBe(4); // "Some", "comment", "(see", "here." (4 words)
       expect(countFootnoteWords("Regular comments in a footnote.")).toBe(5);
+
+      // User requested test cases
+      expect(countFootnoteWords("Thomas R. Schreiner, “Baptism in the Epistles,” in Believer’s Baptism: Sign of the New Covenant in Christ, NAC Studies in Bible and Theology (Broadman & Holman Publishers, 2006), 77, 93; Schreiner and Wright, “Introduction,” 7.")).toBe(0);
+      expect(countFootnoteWords("See also Thomas, A Case for Mixed-Audience with Reference to the Warning Passages in the Book of Hebrews, 181–272.")).toBe(2);
+      expect(countFootnoteWords("Thomas, A Case for Mixed-Audience with Reference to the Warning Passages in the Book of Hebrews, 181–272.")).toBe(0);
+
+      // Extra user requested test cases
+      expect(countFootnoteWords("Gentry and Wellum, Kingdom through Covenant, 555; see also: Fred A. Malone, The Baptism of Disciples Alone: A Covenantal Argument for Credobaptism versus Paedobaptism, Rev. and expanded, 2nd ed. (Founders Press, 2007), 72–76.")).toBe(2);
+      expect(countFootnoteWords("Gentry and Wellum, Kingdom through Covenant, 555; Fred A. Malone, The Baptism of Disciples Alone: A Covenantal Argument for Credobaptism versus Paedobaptism, Rev. and expanded, 2nd ed. (Founders Press, 2007), 72–76.")).toBe(0);
+
+      // test for "i.e.," prefix
+      expect(countFootnoteWords("i.e., Gentry and Wellum, Kingdom through Covenant, 555.")).toBe(1); // only "i.e.," is counted
     });
   });
 });

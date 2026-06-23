@@ -1,6 +1,32 @@
 import { StyleRule, StyleViolation } from "../types.js";
-import { getParagraphText, findParagraphIndex, getRegionForParagraph, isSentenceStart, getParagraphSnippet } from "../utils.js";
+import { getParagraphText, findParagraphIndex, getRegionForParagraph, isSentenceStart, getParagraphSnippet, isHeading } from "../utils.js";
 import { DocumentRegion } from "../../analysis/sections.js";
+import { detectSblReferences, isWithinReference } from "../sbl-reference-detector.js";
+import { DocxParagraph } from "../../docx/types.js";
+
+const EXCLUDED_SERIES_TITLES = [
+  "New International Commentary on the New Testament",
+  "New International Commentary on the Old Testament",
+  "New International Greek Testament Commentary",
+  "Society for New Testament Studies Monograph Series",
+  "Journal for the Study of the New Testament",
+  "Journal for the Study of the Old Testament"
+];
+
+function isInsideExcludedSeries(text: string, matchIndex: number, matchLength: number): boolean {
+  const lowerText = text.toLowerCase();
+  for (const series of EXCLUDED_SERIES_TITLES) {
+    const lowerSeries = series.toLowerCase();
+    let idx = lowerText.indexOf(lowerSeries);
+    while (idx !== -1) {
+      if (matchIndex >= idx && (matchIndex + matchLength) <= (idx + lowerSeries.length)) {
+        return true;
+      }
+      idx = lowerText.indexOf(lowerSeries, idx + 1);
+    }
+  }
+  return false;
+}
 
 export const abbreviationStyleRule: StyleRule = {
   id: "sbl-abbreviation-style",
@@ -23,18 +49,87 @@ export const abbreviationStyleRule: StyleRule = {
     const otRegex = /\bOld\s+Testament\b/gi;
     const ntRegex = /\bNew\s+Testament\b/gi;
 
-    const processText = (text: string, pIndex: number | undefined, region: DocumentRegion | undefined, footnoteId?: string) => {
+    const processText = (para: DocxParagraph, pIndex: number | undefined, region: DocumentRegion | undefined, footnoteId?: string) => {
       if (region === "title-page" || region === "bibliography") {
         return;
       }
+      if (isHeading(para, context)) {
+        return;
+      }
 
+      const text = getParagraphText(para);
       let match;
+      const refSpans = footnoteId ? detectSblReferences(text) : [];
+
+      // Build insideQuotes map
+      const insideQuotes = new Array(text.length).fill(false);
+      let doubleQuoteOpen = false;
+      let singleQuoteOpen = false;
+
+      for (let idx = 0; idx < text.length; idx++) {
+        const c = text[idx];
+        
+        if (c === '“') {
+          doubleQuoteOpen = true;
+        } else if (c === '”') {
+          doubleQuoteOpen = false;
+        } else if (c === '‘') {
+          singleQuoteOpen = true;
+        } else if (c === '’') {
+          const isApostrophe = (idx > 0 && /\w/.test(text[idx-1])) && (idx < text.length - 1 && /\w/.test(text[idx+1]));
+          if (!isApostrophe) {
+            singleQuoteOpen = false;
+          }
+        } else if (c === '"') {
+          doubleQuoteOpen = !doubleQuoteOpen;
+        } else if (c === '\'') {
+          const isApostrophe = (idx > 0 && /\w/.test(text[idx-1])) && (idx < text.length - 1 && /\w/.test(text[idx+1]));
+          if (!isApostrophe) {
+            singleQuoteOpen = !singleQuoteOpen;
+          }
+        }
+        
+        insideQuotes[idx] = doubleQuoteOpen || singleQuoteOpen;
+      }
+
+      // Build insideItalics map
+      const insideItalics = new Array(text.length).fill(false);
+      const insideBold = new Array(text.length).fill(false);
+      let charIdx = 0;
+      for (const run of para.runs) {
+        const resolvedProps = context.resolveRunProperties(run, para);
+        const italic = resolvedProps.italic === true;
+        const bold = resolvedProps.bold === true;
+        for (let rCharIdx = 0; rCharIdx < run.text.length; rCharIdx++) {
+          if (charIdx < insideItalics.length) {
+            insideItalics[charIdx] = italic;
+            insideBold[charIdx] = bold;
+            charIdx++;
+          }
+        }
+      }
+
+      const isIgnoredAt = (matchIndex: number, matchLength: number): boolean => {
+        for (let j = 0; j < matchLength; j++) {
+          const idx = matchIndex + j;
+          if (idx < text.length && (insideQuotes[idx] || insideItalics[idx] || insideBold[idx])) {
+            return true;
+          }
+        }
+        return false;
+      };
 
       // 1. e.g. check
       egRegex.lastIndex = 0;
       while ((match = egRegex.exec(text)) !== null) {
         const raw = match[0];
         const index = match.index;
+        if (isIgnoredAt(index, raw.length)) {
+          continue;
+        }
+        if (footnoteId && isWithinReference(index, refSpans)) {
+          continue;
+        }
         const atSentenceStart = isSentenceStart(text, index);
         const correct = atSentenceStart ? "E.g.," : "e.g.,";
         
@@ -61,6 +156,12 @@ export const abbreviationStyleRule: StyleRule = {
       while ((match = ieRegex.exec(text)) !== null) {
         const raw = match[0];
         const index = match.index;
+        if (isIgnoredAt(index, raw.length)) {
+          continue;
+        }
+        if (footnoteId && isWithinReference(index, refSpans)) {
+          continue;
+        }
         const atSentenceStart = isSentenceStart(text, index);
         const correct = atSentenceStart ? "I.e.," : "i.e.,";
         
@@ -87,6 +188,12 @@ export const abbreviationStyleRule: StyleRule = {
       while ((match = cfRegex.exec(text)) !== null) {
         const raw = match[0];
         const index = match.index;
+        if (isIgnoredAt(index, raw.length)) {
+          continue;
+        }
+        if (footnoteId && isWithinReference(index, refSpans)) {
+          continue;
+        }
         const atSentenceStart = isSentenceStart(text, index);
         const correct = atSentenceStart ? "Cf." : "cf.";
         
@@ -112,6 +219,13 @@ export const abbreviationStyleRule: StyleRule = {
       etalRegex.lastIndex = 0;
       while ((match = etalRegex.exec(text)) !== null) {
         const raw = match[0];
+        const index = match.index;
+        if (isIgnoredAt(index, raw.length)) {
+          continue;
+        }
+        if (footnoteId && isWithinReference(index, refSpans)) {
+          continue;
+        }
         const correct = "et al.";
         
         if (raw !== correct) {
@@ -136,6 +250,13 @@ export const abbreviationStyleRule: StyleRule = {
       etcRegex.lastIndex = 0;
       while ((match = etcRegex.exec(text)) !== null) {
         const raw = match[0];
+        const index = match.index;
+        if (isIgnoredAt(index, raw.length)) {
+          continue;
+        }
+        if (footnoteId && isWithinReference(index, refSpans)) {
+          continue;
+        }
         if (raw !== "etc.") {
           violations.push({
             ruleId: abbreviationStyleRule.id,
@@ -158,6 +279,13 @@ export const abbreviationStyleRule: StyleRule = {
       vizRegex.lastIndex = 0;
       while ((match = vizRegex.exec(text)) !== null) {
         const raw = match[0];
+        const index = match.index;
+        if (isIgnoredAt(index, raw.length)) {
+          continue;
+        }
+        if (footnoteId && isWithinReference(index, refSpans)) {
+          continue;
+        }
         if (raw !== "viz.") {
           violations.push({
             ruleId: abbreviationStyleRule.id,
@@ -180,6 +308,13 @@ export const abbreviationStyleRule: StyleRule = {
       caRegex.lastIndex = 0;
       while ((match = caRegex.exec(text)) !== null) {
         const raw = match[0]; // e.g. "ca 1500"
+        const index = match.index;
+        if (isIgnoredAt(index, raw.length)) {
+          continue;
+        }
+        if (footnoteId && isWithinReference(index, refSpans)) {
+          continue;
+        }
         const correct = raw.startsWith("Ca") ? "Ca." + raw.substring(2) : "ca." + raw.substring(2);
         violations.push({
           ruleId: abbreviationStyleRule.id,
@@ -201,6 +336,16 @@ export const abbreviationStyleRule: StyleRule = {
       otRegex.lastIndex = 0;
       while ((match = otRegex.exec(text)) !== null) {
         const raw = match[0];
+        const idx = match.index;
+        if (isIgnoredAt(idx, raw.length)) {
+          continue;
+        }
+        if (isInsideExcludedSeries(text, idx, raw.length)) {
+          continue;
+        }
+        if (footnoteId && isWithinReference(idx, refSpans)) {
+          continue;
+        }
         violations.push({
           ruleId: abbreviationStyleRule.id,
           ruleName: abbreviationStyleRule.name,
@@ -221,6 +366,16 @@ export const abbreviationStyleRule: StyleRule = {
       ntRegex.lastIndex = 0;
       while ((match = ntRegex.exec(text)) !== null) {
         const raw = match[0];
+        const idx = match.index;
+        if (isIgnoredAt(idx, raw.length)) {
+          continue;
+        }
+        if (isInsideExcludedSeries(text, idx, raw.length)) {
+          continue;
+        }
+        if (footnoteId && isWithinReference(idx, refSpans)) {
+          continue;
+        }
         violations.push({
           ruleId: abbreviationStyleRule.id,
           ruleName: abbreviationStyleRule.name,
@@ -240,17 +395,15 @@ export const abbreviationStyleRule: StyleRule = {
 
     // Process body paragraphs
     for (const para of doc.paragraphs) {
-      const text = getParagraphText(para);
       const pIndex = findParagraphIndex(para, doc);
       const region = getRegionForParagraph(para, sections);
-      processText(text, pIndex, region);
+      processText(para, pIndex, region);
     }
 
     // Process footnotes
     for (const footnote of doc.footnotes) {
       for (const para of footnote.paragraphs) {
-        const text = getParagraphText(para);
-        processText(text, undefined, undefined, String(footnote.id));
+        processText(para, undefined, undefined, String(footnote.id));
       }
     }
 

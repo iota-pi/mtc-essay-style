@@ -43,6 +43,14 @@ describe("SBL v2 Reference Detector", () => {
       expect(text.substring(spans[0].start, spans[0].end)).toBe(text);
     });
 
+    it("should detect Donald Robinson chapter reference", () => {
+      const text = ' Donald Robinson, “The Church in the New Testament,” in Donald Robinson: Selected Works, ed. Peter G. Bolt and Mark Thompson, 1st ed. (1959; Australian Church Record ; Moore College, 2008), 213.';
+      const spans = detectSblReferences(text);
+      expect(spans.length).toBe(1);
+      expect(spans[0].type).toBe("chapter-first");
+      expect(text.substring(spans[0].start, spans[0].end)).toBe(text.trim());
+    });
+
     it("should detect Ibid. references", () => {
       const texts = ["Ibid., 145.", "Ibid.", "cf. Ibid., 145."];
       for (const text of texts) {

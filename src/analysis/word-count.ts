@@ -44,7 +44,7 @@ export function countFootnoteWords(text: string): number {
   }
 
   // Get ignored spans, excluding prefixes
-  const prefixRegex = /^((?:cf\.|see|see\s+also|e\.g\.,)\s+)/i;
+  const prefixRegex = /^((?:cf\.|see\s+also:?|see:?|e\.g\.,|i\.e\.,?)\s+)/i;
   const chars = text.split("");
 
   for (const span of spans) {

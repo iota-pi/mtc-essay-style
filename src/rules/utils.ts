@@ -76,6 +76,9 @@ export function isInsideParentheses(text: string, index: number): boolean {
  */
 export function isSentenceStart(text: string, index: number): boolean {
   if (index === 0) return true;
+  const precedingAll = text.substring(0, index);
+  if (precedingAll.trim() === "") return true;
+  
   const preceding = text.substring(Math.max(0, index - 4), index);
   return /[.!?]\s+$/.test(preceding) || /[.!?]"\s+$/.test(preceding) || /[.!?]'\s+$/.test(preceding);
 }
