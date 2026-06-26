@@ -113,4 +113,38 @@ describe("Rule 12: SBL Reference Abbreviations", () => {
     const violations = sblReferenceAbbreviationsRule.check(context);
     expect(violations.length).toBe(0);
   });
+
+  it("should flag unabbreviated article and folio forms mid-sentence and suggest correct abbreviations", () => {
+    const doc = createTestDocument({
+      paragraphs: [
+        createTestParagraph("In article 5 we see a key theme."),
+        createTestParagraph("In folio 12 we read that.")
+      ]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = sblReferenceAbbreviationsRule.check(context);
+    expect(violations.length).toBe(2);
+    expect(violations[0].correction?.found).toBe("article 5");
+    expect(violations[0].correction?.expected).toBe("art. 5");
+    expect(violations[1].correction?.found).toBe("folio 12");
+    expect(violations[1].correction?.expected).toBe("fol. 12");
+  });
+
+  it("should flag plural / singular mismatches for article and folio abbreviations", () => {
+    const doc = createTestDocument({
+      paragraphs: [
+        createTestParagraph("We read this (art. 10–12)."),
+        createTestParagraph("We read this (fols. 10).")
+      ]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = sblReferenceAbbreviationsRule.check(context);
+    expect(violations.length).toBe(2);
+    expect(violations[0].correction?.found).toBe("art. 10–12");
+    expect(violations[0].correction?.expected).toBe("arts. 10–12");
+    expect(violations[1].correction?.found).toBe("fols. 10");
+    expect(violations[1].correction?.expected).toBe("fol. 10");
+  });
 });

@@ -87,8 +87,8 @@ export const bibleBookAbbreviationsRule: StyleRule = {
         const suffixMatch = afterText.match(/^\s+(\d+(?:[.:]\d+)?(?:[–-]\d+)?)/);
         const suffix = suffixMatch ? suffixMatch[0] : "";
         const isFollowedByChap = suffixMatch !== null;
-        
-        if (rawMatch === "mark" && !isFollowedByChap) {
+        const lowerRaw = rawMatch.toLowerCase();
+        if ((lowerRaw === "mark" || lowerRaw === "judges") && !isFollowedByChap) {
           continue;
         }
         

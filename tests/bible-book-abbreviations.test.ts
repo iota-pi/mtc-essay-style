@@ -200,4 +200,34 @@ describe("Rule 3: Bible Book Name Abbreviations", () => {
       expect(violations[0].correction?.expected).toBe(expected);
     }
   });
+
+  it.each([
+    { text: "The judges decided the case.", expectedViolations: 0, found: undefined, expected: undefined },
+    { text: "The Judges of Israel were leaders.", expectedViolations: 0, found: undefined, expected: undefined },
+    { text: "We read judges 3:1.", expectedViolations: 1, found: "judges 3:1", expected: "Judg 3:1" },
+    { text: "We read Judges 3:1.", expectedViolations: 1, found: "Judges 3:1", expected: "Judg 3:1" },
+    { text: "We read judges 3.", expectedViolations: 1, found: "judges 3", expected: "Judg 3" },
+    { text: "Judges 3:1 is a key verse.", expectedViolations: 0, found: undefined, expected: undefined },
+    { text: "Judg 3:1 is a key verse.", expectedViolations: 1, found: "Judg 3:1", expected: "Judges 3:1" },
+    { text: "Judges is a book of the Bible.", expectedViolations: 0, found: undefined, expected: undefined }
+  ])("should correctly handle judges in '$text'", ({ text, expectedViolations, found, expected }) => {
+    const doc = createTestDocument({
+      paragraphs: [createTestParagraph(text)]
+    });
+    const sections: DocumentSections = {
+      titlePage: [],
+      body: doc.paragraphs,
+      bibliography: [],
+      hasTitlePage: false,
+      hasBibliography: false
+    };
+    const context = createTestContext(doc, sections);
+    const violations = bibleBookAbbreviationsRule.check(context);
+
+    expect(violations.length).toBe(expectedViolations);
+    if (expectedViolations > 0) {
+      expect(violations[0].correction?.found).toBe(found);
+      expect(violations[0].correction?.expected).toBe(expected);
+    }
+  });
 });

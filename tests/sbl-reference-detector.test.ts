@@ -95,6 +95,67 @@ describe("SBL v2 Reference Detector", () => {
         expect(text.substring(spans[0].start, spans[0].end)).toBe(text);
       }
     });
+
+    it("should detect references using other referencing terms like art. and fol.", () => {
+      const texts = [
+        "Talbert, Reading John, art. 5.",
+        "Talbert, Reading John, arts. 5–7.",
+        "Talbert, Reading John, fol. 12.",
+        "Talbert, Reading John, fols. 12–15.",
+        "Ibid., art. 5.",
+        "Ibid., fol. 12."
+      ];
+      for (const text of texts) {
+        const spans = detectSblReferences(text);
+        expect(spans.length).toBe(1);
+        expect(text.substring(spans[0].start, spans[0].end)).toBe(text);
+      }
+    });
+
+    it("should detect journal first references with nested quotes and apostrophes in the title", () => {
+      const text = "Neil G. T. Jeffers, “‘And Their Children After Them’: A Response to Reformed Baptist Readings of Jeremiah’s New Covenant Promises,” Ecclesia Reformanda 1.2 (2009): 149.";
+      const spans = detectSblReferences(text);
+      expect(spans.length).toBe(1);
+      expect(spans[0].type).toBe("journal-first");
+      expect(text.substring(spans[0].start, spans[0].end)).toBe(text);
+    });
+
+    it("should detect first references without page numbers (citing entire work)", () => {
+      const journalText = "Charles R. Schulz, “Communing with the Betrayer: The Presence and Significance of Judas at the Last Supper among Patristic Sources,” Concordia Theological Quarterly 86.2 (2022).";
+      const journalSpans = detectSblReferences(journalText);
+      expect(journalSpans.length).toBe(1);
+      expect(journalSpans[0].type).toBe("journal-first");
+
+      const bookText = "Charles H. Talbert, Reading John: A Literary and Theological Commentary (New York: Crossroad, 1992).";
+      const bookSpans = detectSblReferences(bookText);
+      expect(bookSpans.length).toBe(1);
+      expect(bookSpans[0].type).toBe("book-first");
+
+      const chapterText = 'Harold W. Attridge, "Jewish Historiography," in Early Judaism and Its Modern Interpreters, ed. Robert A. Kraft (Philadelphia: Fortress, 1986).';
+      const chapterSpans = detectSblReferences(chapterText);
+      expect(chapterSpans.length).toBe(1);
+      expect(chapterSpans[0].type).toBe("chapter-first");
+    });
+
+    it("should detect footnote with introductory text and journal citation without page numbers", () => {
+      const text = "For a history of interpretation on Judas’ presence, see Charles R. Schulz, “Communing with the Betrayer: The Presence and Significance of Judas at the Last Supper among Patristic Sources,” Concordia Theological Quarterly 86.2 (2022).";
+      const spans = detectSblReferences(text);
+      expect(spans.length).toBe(1);
+      expect(spans[0].type).toBe("journal-first");
+      expect(text.substring(spans[0].start, spans[0].end)).toBe("see Charles R. Schulz, “Communing with the Betrayer: The Presence and Significance of Judas at the Last Supper among Patristic Sources,” Concordia Theological Quarterly 86.2 (2022).");
+    });
+
+    it("should detect references with author initials (e.g. D. A. Carson, J. I. Packer)", () => {
+      const chapterText = "D. A. Carson, “Reflections on Assurance,” in Still Sovereign: Contemporary Perspectives on Election, Foreknowledge & Grace, 2nd ed. (Baker Books, 2000), 260.";
+      const chapterSpans = detectSblReferences(chapterText);
+      expect(chapterSpans.length).toBe(1);
+      expect(chapterSpans[0].type).toBe("book-first");
+
+      const journalText = "J. I. Packer, “Baptism: A Sacrament of the Covenant of Grace,” Churchman 69.2 (1955).";
+      const journalSpans = detectSblReferences(journalText);
+      expect(journalSpans.length).toBe(1);
+      expect(journalSpans[0].type).toBe("journal-first");
+    });
   });
 
   describe("Complex Footnote Structures", () => {

@@ -26,6 +26,8 @@ const TERMS: RefTerm[] = [
   { singularWord: "volume", pluralWord: "volumes", singularAbbrev: "vol.", pluralAbbrev: "vols." },
   { singularWord: "figure", pluralWord: "figures", singularAbbrev: "fig.", pluralAbbrev: "figs." },
   { singularWord: "section", pluralWord: "sections", singularAbbrev: "sec.", pluralAbbrev: "secs." },
+  { singularWord: "article", pluralWord: "articles", singularAbbrev: "art.", pluralAbbrev: "arts." },
+  { singularWord: "folio", pluralWord: "folios", singularAbbrev: "fol.", pluralAbbrev: "fols." },
 ];
 
 const REF_ABBREVS = TERMS.map(t => t.singularAbbrev.replace(/\.$/, "")).concat(TERMS.map(t => t.pluralAbbrev.replace(/\.$/, "")));

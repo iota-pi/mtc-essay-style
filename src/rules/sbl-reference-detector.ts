@@ -6,29 +6,29 @@ export interface SblReferenceSpan {
 
 // Common SBL reference prefixes
 const PREFIX_PATTERNS = [
-  'cf\\.',
-  'see\\s+also:?',
-  'see\\s+esp\\.?',
-  'see\\s+especially',
-  'see\\s+e\\.g\\.,',
-  'see,?\\s+esp\\.?,?',
-  'see,?\\s+e\\.g\\.,?',
-  'see:?',
-  'e\\.g\\.,',
-  'i\\.e\\.,?',
-  'contra',
-  'following',
-  'so',
-  'similarly',
-  'esp\\.',
-  'especially',
-  'also',
-  'according\\s+to',
-  'as\\s+argued\\s+(?:in|by)',
-  'as\\s+discussed\\s+in',
-  'as\\s+noted\\s+(?:in|by)',
-  'quoted\\s+in',
-  'cited\\s+in'
+  '[Cc]f\\.',
+  '[Ss]ee\\s+also:?',
+  '[Ss]ee\\s+esp\\.?',
+  '[Ss]ee\\s+especially',
+  '[Ss]ee\\s+e\\.g\\.,',
+  '[Ss]ee,?\\s+esp\\.?,?',
+  '[Ss]ee,?\\s+e\\.g\\.,?',
+  '[Ss]ee:?',
+  '[Ee]\\.g\\.,',
+  '[Ii]\\.e\\.,?',
+  '[Cc]ontra',
+  '[Ff]ollowing',
+  '[Ss]o',
+  '[Ss]imilarly',
+  '[Ee]sp\\.',
+  '[Ee]specially',
+  '[Aa]lso',
+  '[Aa]ccording\\s+to',
+  '[Aa]s\\s+argued\\s+(?:in|by)',
+  '[Aa]s\\s+discussed\\s+in',
+  '[Aa]s\\s+noted\\s+(?:in|by)',
+  '[Qq]uoted\\s+in',
+  '[Cc]ited\\s+in'
 ];
 
 const PREFIX_GROUP = PREFIX_PATTERNS.join('|');
@@ -36,7 +36,13 @@ export const SBL_PREFIX_REGEX_STR = `(?:(?:${PREFIX_GROUP})\\s+)`;
 const PREFIX = `(?:${SBL_PREFIX_REGEX_STR})?`;
 
 // Author name pattern (capitalized names, initials, optional 'and', '&', commas, 'et al.')
-const AUTHOR = `[A-Z][A-Za-z\\s\\.&\\’'-]+(?:,\\s+(?:and\\s+)?[A-Z][A-Za-z\\s\\.&\\’'-]+)*(?:\\s+et\\s+al\\.)?`;
+const AUTHOR_SEGMENT = "[A-Z][A-Za-z\\’'-]*\\.?(?:\\s+(?:[A-Z][A-Za-z\\’'-]*\\.?|and|&|de|van|der|von))*";
+const AUTHOR = `${AUTHOR_SEGMENT}(?:,\\s+(?:and\\s+)?${AUTHOR_SEGMENT})*(?:\\s+et\\s+al\\.)?`;
+
+
+
+// Valid referencing keywords (singular and plural abbreviations, e.g. p., pp., art., arts., fol., fols.)
+const REF_KEYWORD = '(?:(?:[Pp]p?|[Aa]rts?|[Ff]ols?|[Vv]v?|[Cc]hs?|[Cc]ols?|[Nn]n?|[Nn]os?|[Vv]ols?|[Ff]igs?|[Ss]ecs?)\\.\\s*)?';
 
 const PATTERNS = [
   // 1. Chapter/Section in Edited Volume (First Reference)
@@ -44,7 +50,7 @@ const PATTERNS = [
   {
     type: 'chapter-first',
     regex: new RegExp(
-      `^${PREFIX}${AUTHOR},\\s+["“”'‘’][^"“”'‘’]+?["“”'‘’],?\\s+[Ii]n\\s+[^,]+,\\s*(?:[Ee]d\\.|[Tt]rans\\.|[Ee]dited\\s+by)\\s+[^(\\n]+\\((?:[^)]+?:\\s*)?[^)]*?\\d{4}\\),\\s*(?:[Pp]p?\\.\\s*)?\\d+[\\d\\s–,-]*\\b\\.?`
+      `^${PREFIX}${AUTHOR},\\s+(?:[“"][^“”"]*?[”"]|[‘'][^‘’']*?[’']),?\\s+[Ii]n\\s+[^,]+,\\s*(?:[Ee]d\\.|[Tt]rans\\.|[Ee]dited\\s+by)\\s+[^(\\n]+\\((?:[^)]+?:\\s*)?[^)]*?\\d{4}\\)(?:,\\s*${REF_KEYWORD}\\d+[\\d\\s–,-]*\\b)?\\.?`
     )
   },
   // 2. Journal Article (First Reference)
@@ -52,7 +58,7 @@ const PATTERNS = [
   {
     type: 'journal-first',
     regex: new RegExp(
-      `^${PREFIX}${AUTHOR},\\s+["“”'‘’][^"“”'‘’]+?["“”'‘’],?\\s+[^(\\n]+\\s+\\d+(?:\\.\\d+)?\\s*\\(\\d{4}\\):\\s*\\d+[\\d\\s–,-]*\\b\\.?`
+      `^${PREFIX}${AUTHOR},\\s+(?:[“"][^“”"]*?[”"]|[‘'][^‘’']*?[’']),?\\s+[^(\\n]+\\s+\\d+(?:\\.\\d+)?\\s*\\(\\d{4}\\)(?::\\s*\\d+[\\d\\s–,-]*\\b)?\\.?`
     )
   },
   // 3. Book (First Reference)
@@ -60,7 +66,7 @@ const PATTERNS = [
   {
     type: 'book-first',
     regex: new RegExp(
-      `^${PREFIX}${AUTHOR},\\s+[^(\\n]+\\((?:[^)]+?:\\s*)?[^)]*?\\d{4}\\),\\s*(?:[Pp]p?\\.\\s*)?\\d+[\\d\\s–,-]*\\b\\.?`
+      `^${PREFIX}${AUTHOR},\\s+[^(\\n]+\\((?:[^)]+?:\\s*)?[^)]*?\\d{4}\\)(?:,\\s*${REF_KEYWORD}\\d+[\\d\\s–,-]*\\b)?\\.?`
     )
   },
   // 4. Short / Subsequent Reference (Book, Journal, or Chapter)
@@ -69,7 +75,7 @@ const PATTERNS = [
   {
     type: 'short-reference',
     regex: new RegExp(
-      `^${PREFIX}${AUTHOR},\\s+(?:["“”'‘’][^"“”'‘’]+?["“”'‘’](?:,\\s*|\\s*)|[^,]+,\\s*)(?:[Pp]p?\\.\\s*)?\\d+[\\d\\s–,-]*\\b\\.?`
+      `^${PREFIX}${AUTHOR},\\s+(?:(?:[“"][^“”"]*?[”"]|[‘'][^‘’']*?[’'])(?:,\\s*|\\s*)|[^,]+,\\s*)${REF_KEYWORD}\\d+[\\d\\s–,-]*\\b\\.?`
     )
   },
   // 5. Ibid. Reference
@@ -77,7 +83,7 @@ const PATTERNS = [
   {
     type: 'ibid-reference',
     regex: new RegExp(
-      `^${PREFIX}[Ii]bid\\.(?:,\\s*(?:[Pp]p?\\.\\s*)?\\d+[\\d\\s–,-]*\\b\\.?)?`
+      `^${PREFIX}[Ii]bid\\.(?:,\\s*${REF_KEYWORD}\\d+[\\d\\s–,-]*\\b\\.?)?`
     )
   }
 ];
