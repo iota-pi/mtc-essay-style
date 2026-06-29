@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils.js";
-import { bibleConsecutiveRefsRule } from "../src/rules/definitions/bible-consecutive-refs.js";
+import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils";
+import { bibleConsecutiveRefsRule } from "../src/rules/definitions/bible-consecutive-refs";
 
 describe("Rule 9: Consecutive Bible References Separator", () => {
   it.each([

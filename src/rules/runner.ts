@@ -1,9 +1,9 @@
-import { ParsedDocument } from "../docx/types.js";
-import { DocumentSections } from "../analysis/sections.js";
-import { WordCountResult, countWords } from "../analysis/word-count.js";
-import { RuleRegistry } from "./registry.js";
-import { StyleViolation, RuleContext } from "./types.js";
-import { resolveRunProperties, resolveParagraphProperties } from "../docx/style-resolver.js";
+import { ParsedDocument } from '../docx/types'
+import { DocumentSections } from '../analysis/sections'
+import { WordCountResult, countWords } from '../analysis/word-count'
+import { RuleRegistry } from './registry'
+import { StyleViolation, RuleContext } from './types'
+import { resolveRunProperties, resolveParagraphProperties } from '../docx/style-resolver'
 
 export interface CheckResult {
   violations: StyleViolation[];
@@ -17,41 +17,41 @@ export function runChecks(
   sections: DocumentSections,
   registry: RuleRegistry
 ): CheckResult {
-  const violations: StyleViolation[] = [];
-  const wordCount = countWords(doc, sections);
+  const violations: StyleViolation[] = []
+  const wordCount = countWords(doc, sections)
 
   // Context to pass to each rule
   const context: RuleContext = {
     document: doc,
     sections,
     resolveRunProperties: (run, para) => resolveRunProperties(run, para, doc),
-    resolveParagraphProperties: (para) => resolveParagraphProperties(para, doc)
-  };
+    resolveParagraphProperties: para => resolveParagraphProperties(para, doc)
+  }
 
   // Run all registered rules
-  const rules = registry.getAll();
+  const rules = registry.getAll()
   for (const rule of rules) {
     try {
-      const ruleViolations = rule.check(context);
-      violations.push(...ruleViolations);
-    } catch (err: any) {
+      const ruleViolations = rule.check(context)
+      violations.push(...ruleViolations)
+    } catch (err: unknown) {
       violations.push({
         ruleId: rule.id,
         ruleName: rule.name,
-        severity: "error",
-        message: `Error executing rule: ${err.message || err}`
-      });
+        severity: 'error',
+        message: `Error executing rule: ${err instanceof Error ? err.message : String(err)}`,
+      })
     }
   }
 
   // Built-in check: warn if no bibliography is detected
   if (!sections.hasBibliography) {
     violations.push({
-      ruleId: "builtin-bibliography-check",
-      ruleName: "Bibliography Detection",
-      severity: "warning",
+      ruleId: 'builtin-bibliography-check',
+      ruleName: 'Bibliography Detection',
+      severity: 'warning',
       message: "No bibliography section detected at the end of the document. Ensure you have a bibliography page with a heading like 'Bibliography' or 'References'."
-    });
+    })
   }
 
   return {
@@ -59,5 +59,5 @@ export function runChecks(
     wordCount,
     sections,
     rulesRun: rules.length
-  };
+  }
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils.js";
-import { DocumentSections } from "../src/analysis/sections.js";
-import { bibleBookAbbreviationsRule } from "../src/rules/definitions/bible-book-abbreviations.js";
+import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils";
+import { DocumentSections } from "../src/analysis/sections";
+import { bibleBookAbbreviationsRule } from "../src/rules/definitions/bible-book-abbreviations";
 
 describe("Rule 3: Bible Book Name Abbreviations", () => {
   it.each([

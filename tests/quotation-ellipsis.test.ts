@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils.js";
-import { quotationEllipsisRule } from "../src/rules/definitions/quotation-ellipsis.js";
+import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils";
+import { quotationEllipsisRule } from "../src/rules/definitions/quotation-ellipsis";
 
 describe("Rule 14: Quotation Ellipsis Spacing", () => {
   it.each([

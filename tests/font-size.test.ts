@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils.js";
-import { DocumentSections } from "../src/analysis/sections.js";
-import { fontSizeRule } from "../src/rules/definitions/font-size.js";
+import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils";
+import { DocumentSections } from "../src/analysis/sections";
+import { fontSizeRule } from "../src/rules/definitions/font-size";
 
 describe("Rule 8: Font Size 12pt", () => {
   it("should flag runs that are not size 12pt (fontSize 24)", () => {

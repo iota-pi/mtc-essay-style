@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils.js";
-import { DocumentSections } from "../src/analysis/sections.js";
-import { quotationPunctuationRule } from "../src/rules/definitions/quotation-punctuation.js";
+import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils";
+import { DocumentSections } from "../src/analysis/sections";
+import { quotationPunctuationRule } from "../src/rules/definitions/quotation-punctuation";
 
 describe("Rule 5: Quotation Mark and Citation Punctuation", () => {
   it.each([

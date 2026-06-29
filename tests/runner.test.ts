@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { runChecks } from "../src/rules/runner.js";
-import { RuleRegistry } from "../src/rules/registry.js";
-import { ParsedDocument, DocxParagraph } from "../src/docx/types.js";
-import { DocumentSections } from "../src/analysis/sections.js";
-import { StyleRule } from "../src/rules/types.js";
+import { runChecks } from "../src/rules/runner";
+import { RuleRegistry } from "../src/rules/registry";
+import { ParsedDocument, DocxParagraph } from "../src/docx/types";
+import { DocumentSections } from "../src/analysis/sections";
+import { StyleRule } from "../src/rules/types";
 
 function createParagraph(text: string): DocxParagraph {
   return {

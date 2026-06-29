@@ -1,12 +1,12 @@
-export { parseDocx } from "./docx/parser.js";
-export { resolveRunProperties, resolveParagraphProperties } from "./docx/style-resolver.js";
-export { classifySections } from "./analysis/sections.js";
-export { countWords, countWordsInText } from "./analysis/word-count.js";
+export { parseDocx } from './docx/parser'
+export { resolveRunProperties, resolveParagraphProperties } from './docx/style-resolver'
+export { classifySections } from './analysis/sections'
+export { countWords, countWordsInText } from './analysis/word-count'
 export {
   defaultRegistry,
   RuleRegistry,
   runChecks
-} from "./rules/index.js";
+} from './rules/index'
 
 export type {
   ParsedDocument,
@@ -18,16 +18,16 @@ export type {
   ParagraphProperties,
   LineSpacing,
   Indentation
-} from "./docx/types.js";
+} from './docx/types'
 
 export type {
   DocumentSections,
   DocumentRegion
-} from "./analysis/sections.js";
+} from './analysis/sections'
 
 export type {
   WordCountResult
-} from "./analysis/word-count.js";
+} from './analysis/word-count'
 
 export type {
   StyleRule,
@@ -36,4 +36,4 @@ export type {
   RuleScope,
   Severity,
   CheckResult
-} from "./rules/index.js";
+} from './rules/index'

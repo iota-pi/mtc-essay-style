@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { parseDocx } from "../src/docx/parser.js";
-import { createMockDocx, writeTempDocx, cleanTempDir } from "./test-utils.js";
+import { parseDocx } from "../src/docx/parser";
+import { createMockDocx, writeTempDocx, cleanTempDir } from "./test-utils";
 
 const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
@@ -94,7 +94,7 @@ describe("DOCX Parser", () => {
 
   it("should extract formatting properties", async () => {
     const parsed = await parseDocx(tempFilePath);
-    
+
     // Paragraph 1
     const p1 = parsed.paragraphs[0];
     expect(p1.properties.styleId).toBe("Heading1");

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { classifySections } from "../src/analysis/sections.js";
-import { ParsedDocument, DocxParagraph } from "../src/docx/types.js";
+import { classifySections } from "../src/analysis/sections";
+import { ParsedDocument, DocxParagraph } from "../src/docx/types";
 
 function createParagraph(text: string, options: Partial<DocxParagraph> = {}): DocxParagraph {
   const properties = options.properties || {};

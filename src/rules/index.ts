@@ -1,21 +1,21 @@
-import { RuleRegistry } from "./registry.js";
-import { bibleRefsInFootnotesRule } from "./definitions/bible-refs-in-footnotes.js";
-import { bibleRefFormatRule } from "./definitions/bible-ref-format.js";
-import { bibleBookAbbreviationsRule } from "./definitions/bible-book-abbreviations.js";
-import { abbreviationStyleRule } from "./definitions/abbreviation-style.js";
-import { quotationPunctuationRule } from "./definitions/quotation-punctuation.js";
-import { pageNumbersRule } from "./definitions/page-numbers.js";
-import { lineSpacingRule } from "./definitions/line-spacing.js";
-import { fontSizeRule } from "./definitions/font-size.js";
-import { bibleConsecutiveRefsRule } from "./definitions/bible-consecutive-refs.js";
-import { bibleRangeEndashRule } from "./definitions/bible-range-endash.js";
-import { bodyEndashRule } from "./definitions/body-endash.js";
-import { sblReferenceAbbreviationsRule } from "./definitions/sbl-reference-abbreviations.js";
-import { greekHebrewQuotesRule } from "./definitions/greek-hebrew-quotes.js";
-import { quotationEllipsisRule } from "./definitions/quotation-ellipsis.js";
+import { RuleRegistry } from './registry'
+import { bibleRefsInFootnotesRule } from './definitions/bible-refs-in-footnotes'
+import { bibleRefFormatRule } from './definitions/bible-ref-format'
+import { bibleBookAbbreviationsRule } from './definitions/bible-book-abbreviations'
+import { abbreviationStyleRule } from './definitions/abbreviation-style'
+import { quotationPunctuationRule } from './definitions/quotation-punctuation'
+import { pageNumbersRule } from './definitions/page-numbers'
+import { lineSpacingRule } from './definitions/line-spacing'
+import { fontSizeRule } from './definitions/font-size'
+import { bibleConsecutiveRefsRule } from './definitions/bible-consecutive-refs'
+import { bibleRangeEndashRule } from './definitions/bible-range-endash'
+import { bodyEndashRule } from './definitions/body-endash'
+import { sblReferenceAbbreviationsRule } from './definitions/sbl-reference-abbreviations'
+import { greekHebrewQuotesRule } from './definitions/greek-hebrew-quotes'
+import { quotationEllipsisRule } from './definitions/quotation-ellipsis'
 
 // Import and register all style rules.
-export const defaultRegistry = new RuleRegistry();
+export const defaultRegistry = new RuleRegistry()
 defaultRegistry.registerAll([
   bibleRefsInFootnotesRule,
   bibleRefFormatRule,
@@ -31,9 +31,9 @@ defaultRegistry.registerAll([
   sblReferenceAbbreviationsRule,
   greekHebrewQuotesRule,
   quotationEllipsisRule
-]);
+])
 
-export { RuleRegistry } from "./registry.js";
-export { runChecks } from "./runner.js";
-export type { StyleRule, StyleViolation, RuleContext, RuleScope, Severity } from "./types.js";
-export type { CheckResult } from "./runner.js";
+export { RuleRegistry } from './registry'
+export { runChecks } from './runner'
+export type { StyleRule, StyleViolation, RuleContext, RuleScope, Severity } from './types'
+export type { CheckResult } from './runner'

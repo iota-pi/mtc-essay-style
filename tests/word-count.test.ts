@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { countWords, countWordsInText, countFootnoteWords } from "../src/analysis/word-count.js";
-import { DocumentSections } from "../src/analysis/sections.js";
-import { ParsedDocument, DocxParagraph } from "../src/docx/types.js";
+import { countWords, countWordsInText, countFootnoteWords } from "../src/analysis/word-count";
+import { DocumentSections } from "../src/analysis/sections";
+import { ParsedDocument, DocxParagraph } from "../src/docx/types";
 
 function createParagraph(text: string): DocxParagraph {
   return {

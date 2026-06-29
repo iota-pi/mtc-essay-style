@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils.js";
-import { DocumentSections } from "../src/analysis/sections.js";
-import { pageNumbersRule } from "../src/rules/definitions/page-numbers.js";
+import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils";
+import { DocumentSections } from "../src/analysis/sections";
+import { pageNumbersRule } from "../src/rules/definitions/page-numbers";
 
 describe("Rule 6: Page Numbers Enabled", () => {
   it("should flag document when hasHeaderOrFooter is false", () => {

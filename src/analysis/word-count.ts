@@ -1,6 +1,6 @@
-import { DocumentSections } from "./sections.js";
-import { ParsedDocument, DocxParagraph } from "../docx/types.js";
-import { detectSblReferences, SBL_PREFIX_REGEX_STR } from "../rules/sbl-reference-detector.js";
+import { DocumentSections } from './sections'
+import { ParsedDocument, DocxParagraph } from '../docx/types'
+import { detectSblReferences, SBL_PREFIX_REGEX_STR } from '../rules/sbl-reference-detector'
 export interface WordCountResult {
   total: number;          // body + footnotes (excludes title page & bibliography)
   bodyText: number;       // word count of body paragraphs only
@@ -10,82 +10,82 @@ export interface WordCountResult {
 }
 
 export function countWordsInText(text: string): number {
-  if (!text) return 0;
-  
-  // Replace all types of whitespace (spaces, tabs, newlines, non-breaking spaces) with a standard space
-  const cleanText = text.replace(/\s+/g, " ").trim();
-  if (!cleanText) return 0;
+  if (!text) return 0
 
-  const tokens = cleanText.split(" ");
-  let count = 0;
+  // Replace all types of whitespace (spaces, tabs, newlines, non-breaking spaces) with a standard space
+  const cleanText = text.replace(/\s+/g, ' ').trim()
+  if (!cleanText) return 0
+
+  const tokens = cleanText.split(' ')
+  let count = 0
   for (const token of tokens) {
     // If the token contains at least one letter or number, count it as a word
     if (/[a-zA-Z0-9\u00C0-\u017F]/.test(token)) {
-      count++;
+      count += 1
     }
   }
-  return count;
+  return count
 }
 
 function countWordsInParagraphs(paragraphs: DocxParagraph[]): number {
-  let count = 0;
+  let count = 0
   for (const para of paragraphs) {
-    const text = para.runs.map(r => r.text).join("");
-    count += countWordsInText(text);
+    const text = para.runs.map(r => r.text).join('')
+    count += countWordsInText(text)
   }
-  return count;
+  return count
 }
 
 export function countFootnoteWords(text: string): number {
-  const spans = detectSblReferences(text);
+  const spans = detectSblReferences(text)
   if (spans.length === 0) {
-    return countWordsInText(text);
+    return countWordsInText(text)
   }
 
   // Get ignored spans, excluding prefixes
-  const prefixRegex = new RegExp('^(' + SBL_PREFIX_REGEX_STR + ')', 'i');
-  const chars = text.split("");
+  const prefixRegex = new RegExp('^(' + SBL_PREFIX_REGEX_STR + ')', 'i')
+  const chars = text.split('')
 
   for (const span of spans) {
-    const spanText = text.substring(span.start, span.end);
-    const prefixMatch = prefixRegex.exec(spanText);
-    
-    let ignoreStart = span.start;
+    const spanText = text.substring(span.start, span.end)
+    const prefixMatch = prefixRegex.exec(spanText)
+
+    let ignoreStart = span.start
     if (prefixMatch) {
-      ignoreStart += prefixMatch[1].length;
+      ignoreStart += prefixMatch[1].length
     }
-    
-    const ignoreEnd = span.end;
-    
+
+    const ignoreEnd = span.end
+
     // Replace characters in the ignored range with spaces
     for (let idx = ignoreStart; idx < ignoreEnd; idx++) {
-      chars[idx] = " ";
+      chars[idx] = ' '
     }
   }
 
-  const cleanText = chars.join("");
-  return countWordsInText(cleanText);
+  const cleanText = chars.join('')
+  return countWordsInText(cleanText)
 }
 
 export function countWords(
   doc: ParsedDocument,
   sections: DocumentSections
 ): WordCountResult {
-  const bodyText = countWordsInParagraphs(sections.body);
-  const titlePage = countWordsInParagraphs(sections.titlePage);
-  const bibliography = countWordsInParagraphs(sections.bibliography);
+  const bodyText = countWordsInParagraphs(sections.body)
+  const titlePage = countWordsInParagraphs(sections.titlePage)
+  const bibliography = countWordsInParagraphs(sections.bibliography)
 
   // Count footnote words (excluding SBL bibliographic reference spans, keeping prefixes)
-  let footnotes = 0;
+  let footnotes = 0
   for (const fn of doc.footnotes) {
     for (const para of fn.paragraphs) {
-      const text = para.runs.map(r => r.text).join("");
-      footnotes += countFootnoteWords(text);
+      const text = para.runs.map(r => r.text).join('')
+      footnotes += countFootnoteWords(text)
     }
   }
 
   // Total word count includes body text and footnotes, but excludes title page and bibliography
-  const total = bodyText + footnotes;
+  const total = bodyText + footnotes
 
   return {
     total,
@@ -93,5 +93,5 @@ export function countWords(
     footnotes,
     bibliography,
     titlePage
-  };
+  }
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils.js";
-import { DocumentSections } from "../src/analysis/sections.js";
-import { bodyEndashRule } from "../src/rules/definitions/body-endash.js";
+import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils";
+import { DocumentSections } from "../src/analysis/sections";
+import { bodyEndashRule } from "../src/rules/definitions/body-endash";
 
 describe("Rule 11: Body Text En-dash Check", () => {
   it("should flag en-dash used outside number ranges in body", () => {

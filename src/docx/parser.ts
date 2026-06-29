@@ -1,6 +1,6 @@
-import JSZip from "jszip";
-import { XMLParser } from "fast-xml-parser";
-import * as fs from "fs";
+import JSZip from 'jszip'
+import { XMLParser } from 'fast-xml-parser'
+import * as fs from 'fs'
 import {
   ParsedDocument,
   DocxParagraph,
@@ -11,209 +11,255 @@ import {
   ParagraphProperties,
   LineSpacing,
   Indentation
-} from "./types.js";
+} from './types'
 
 // Helper to ensure we always have an array
 function ensureArray<T>(val: T | T[] | undefined): T[] {
-  if (val === undefined || val === null) return [];
-  return Array.isArray(val) ? val : [val];
+  if (val === undefined || val === null) return []
+  return Array.isArray(val) ? val : [val]
 }
 
 // Helper to parse OpenXML boolean/val flags
-function parseVal(el: any): any {
-  if (el === undefined || el === null) return undefined;
+function parseVal(el: unknown): unknown {
+  if (el === undefined || el === null) return undefined
   // If it's an empty object/element (like <w:b/>), it means true
-  if (typeof el === "object" && Object.keys(el).length === 0) return true;
-  if (el === "") return true;
-
-  const val = el["@_w:val"];
-  if (val === undefined) return true;
-  if (val === false || val === 0 || val === "false" || val === "0" || val === "none" || val === "off") {
-    return false;
+  if (typeof el === 'object') {
+    const obj = el as Record<string, unknown>
+    if (Object.keys(obj).length === 0) return true
+    const val = obj['@_w:val']
+    if (val === undefined) return true
+    if (val === false || val === 0 || val === 'false' || val === '0' || val === 'none' || val === 'off') {
+      return false
+    }
+    return val
   }
-  return val;
+  if (el === '') return true
+  return el
 }
 
-function getText(wT: any): string {
-  if (wT === undefined || wT === null) return "";
-  if (typeof wT === "string") return wT;
-  if (typeof wT === "number") return String(wT);
-  if (typeof wT === "object") {
-    if (wT["#text"] !== undefined) {
-      return String(wT["#text"]);
+function getText(wT: unknown): string {
+  if (wT === undefined || wT === null) return ''
+  if (typeof wT === 'string') return wT
+  if (typeof wT === 'number') return String(wT)
+  if (typeof wT === 'object') {
+    const obj = wT as Record<string, unknown>
+    if (obj['#text'] !== undefined) {
+      return String(obj['#text'])
     }
   }
-  return "";
+  return ''
 }
 
-function parseLineSpacing(spacingNode: any): LineSpacing | undefined {
-  if (!spacingNode) return undefined;
-  const spacing: LineSpacing = {};
-  if (spacingNode["@_w:line"] !== undefined) spacing.line = Number(spacingNode["@_w:line"]);
-  if (spacingNode["@_w:lineRule"] !== undefined) spacing.lineRule = String(spacingNode["@_w:lineRule"]);
-  if (spacingNode["@_w:before"] !== undefined) spacing.before = Number(spacingNode["@_w:before"]);
-  if (spacingNode["@_w:after"] !== undefined) spacing.after = Number(spacingNode["@_w:after"]);
-  return Object.keys(spacing).length > 0 ? spacing : undefined;
+function parseLineSpacing(spacingNode: unknown): LineSpacing | undefined {
+  if (!spacingNode || typeof spacingNode !== 'object') return undefined
+  const node = spacingNode as Record<string, unknown>
+  const spacing: LineSpacing = {}
+  if (node['@_w:line'] !== undefined) spacing.line = Number(node['@_w:line'])
+  if (node['@_w:lineRule'] !== undefined) spacing.lineRule = String(node['@_w:lineRule'])
+  if (node['@_w:before'] !== undefined) spacing.before = Number(node['@_w:before'])
+  if (node['@_w:after'] !== undefined) spacing.after = Number(node['@_w:after'])
+  return Object.keys(spacing).length > 0 ? spacing : undefined
 }
 
-function parseIndentation(indNode: any): Indentation | undefined {
-  if (!indNode) return undefined;
-  const ind: Indentation = {};
-  if (indNode["@_w:left"] !== undefined) ind.left = Number(indNode["@_w:left"]);
-  if (indNode["@_w:right"] !== undefined) ind.right = Number(indNode["@_w:right"]);
-  if (indNode["@_w:firstLine"] !== undefined) ind.firstLine = Number(indNode["@_w:firstLine"]);
-  if (indNode["@_w:hanging"] !== undefined) ind.hanging = Number(indNode["@_w:hanging"]);
-  return Object.keys(ind).length > 0 ? ind : undefined;
+function parseIndentation(indNode: unknown): Indentation | undefined {
+  if (!indNode || typeof indNode !== 'object') return undefined
+  const node = indNode as Record<string, unknown>
+  const ind: Indentation = {}
+  if (node['@_w:left'] !== undefined) ind.left = Number(node['@_w:left'])
+  if (node['@_w:right'] !== undefined) ind.right = Number(node['@_w:right'])
+  if (node['@_w:firstLine'] !== undefined) ind.firstLine = Number(node['@_w:firstLine'])
+  if (node['@_w:hanging'] !== undefined) ind.hanging = Number(node['@_w:hanging'])
+  return Object.keys(ind).length > 0 ? ind : undefined
 }
 
-function parseRunProperties(rPrNode: any): RunProperties {
-  if (!rPrNode) return {};
-  const props: RunProperties = {};
+function parseRunProperties(rPrNode: unknown): RunProperties {
+  if (!rPrNode || typeof rPrNode !== 'object') return {}
+  const node = rPrNode as Record<string, unknown>
+  const props: RunProperties = {}
 
-  if (rPrNode["w:b"] !== undefined) props.bold = parseVal(rPrNode["w:b"]) === true;
-  if (rPrNode["w:i"] !== undefined) props.italic = parseVal(rPrNode["w:i"]) === true;
-  if (rPrNode["w:sz"] !== undefined) props.fontSize = Number(rPrNode["w:sz"]["@_w:val"]);
-  if (rPrNode["w:color"] !== undefined) props.color = String(rPrNode["w:color"]["@_w:val"]);
+  if (node['w:b'] !== undefined) props.bold = parseVal(node['w:b']) === true
+  if (node['w:i'] !== undefined) props.italic = parseVal(node['w:i']) === true
 
-  if (rPrNode["w:rFonts"] !== undefined) {
+  const szNode = node['w:sz']
+  if (szNode !== undefined && typeof szNode === 'object' && szNode !== null) {
+    props.fontSize = Number((szNode as Record<string, unknown>)['@_w:val'])
+  }
+
+  const colorNode = node['w:color']
+  if (colorNode !== undefined && typeof colorNode === 'object' && colorNode !== null) {
+    props.color = String((colorNode as Record<string, unknown>)['@_w:val'])
+  }
+
+  const rFontsNode = node['w:rFonts']
+  if (rFontsNode !== undefined && typeof rFontsNode === 'object' && rFontsNode !== null) {
+    const fonts = rFontsNode as Record<string, unknown>
     props.fontFamily = String(
-      rPrNode["w:rFonts"]["@_w:ascii"] ||
-      rPrNode["w:rFonts"]["@_w:hAnsi"] ||
-      rPrNode["w:rFonts"]["@_w:cs"] ||
-      ""
-    );
+      fonts['@_w:ascii'] ||
+      fonts['@_w:hAnsi'] ||
+      fonts['@_w:cs'] ||
+      ''
+    )
   }
 
-  if (rPrNode["w:u"] !== undefined) {
-    props.underline = String(rPrNode["w:u"]["@_w:val"] || "single");
+  const uNode = node['w:u']
+  if (uNode !== undefined && typeof uNode === 'object' && uNode !== null) {
+    props.underline = String((uNode as Record<string, unknown>)['@_w:val'] || 'single')
   }
 
-  if (rPrNode["w:vertAlign"] !== undefined) {
-    const val = String(rPrNode["w:vertAlign"]["@_w:val"]);
-    if (val === "superscript") props.superscript = true;
-    if (val === "subscript") props.subscript = true;
+  const vertAlignNode = node['w:vertAlign']
+  if (vertAlignNode !== undefined && typeof vertAlignNode === 'object' && vertAlignNode !== null) {
+    const val = String((vertAlignNode as Record<string, unknown>)['@_w:val'])
+    if (val === 'superscript') props.superscript = true
+    if (val === 'subscript') props.subscript = true
   }
 
-  if (rPrNode["w:smallCaps"] !== undefined) props.smallCaps = parseVal(rPrNode["w:smallCaps"]) === true;
-  if (rPrNode["w:strike"] !== undefined) props.strikethrough = parseVal(rPrNode["w:strike"]) === true;
+  if (node['w:smallCaps'] !== undefined) props.smallCaps = parseVal(node['w:smallCaps']) === true
+  if (node['w:strike'] !== undefined) props.strikethrough = parseVal(node['w:strike']) === true
 
-  return props;
+  return props
 }
 
-function parseParagraphProperties(pPrNode: any): ParagraphProperties {
-  if (!pPrNode) return {};
-  const props: ParagraphProperties = {};
+function parseParagraphProperties(pPrNode: unknown): ParagraphProperties {
+  if (!pPrNode || typeof pPrNode !== 'object') return {}
+  const node = pPrNode as Record<string, unknown>
+  const props: ParagraphProperties = {}
 
-  if (pPrNode["w:pStyle"] !== undefined) {
-    props.styleId = String(pPrNode["w:pStyle"]["@_w:val"]);
+  const pStyleNode = node['w:pStyle']
+  if (pStyleNode !== undefined && typeof pStyleNode === 'object' && pStyleNode !== null) {
+    props.styleId = String((pStyleNode as Record<string, unknown>)['@_w:val'])
   }
-  if (pPrNode["w:jc"] !== undefined) {
-    props.alignment = String(pPrNode["w:jc"]["@_w:val"]);
+  const jcNode = node['w:jc']
+  if (jcNode !== undefined && typeof jcNode === 'object' && jcNode !== null) {
+    props.alignment = String((jcNode as Record<string, unknown>)['@_w:val'])
   }
-  if (pPrNode["w:spacing"] !== undefined) {
-    props.lineSpacing = parseLineSpacing(pPrNode["w:spacing"]);
+  if (node['w:spacing'] !== undefined) {
+    props.lineSpacing = parseLineSpacing(node['w:spacing'])
   }
-  if (pPrNode["w:ind"] !== undefined) {
-    props.indentation = parseIndentation(pPrNode["w:ind"]);
+  if (node['w:ind'] !== undefined) {
+    props.indentation = parseIndentation(node['w:ind'])
   }
-  if (pPrNode["w:outlineLvl"] !== undefined) {
-    props.outlineLevel = Number(pPrNode["w:outlineLvl"]["@_w:val"]);
+  const outlineLvlNode = node['w:outlineLvl']
+  if (outlineLvlNode !== undefined && typeof outlineLvlNode === 'object' && outlineLvlNode !== null) {
+    props.outlineLevel = Number((outlineLvlNode as Record<string, unknown>)['@_w:val'])
   }
-  if (pPrNode["w:keepNext"] !== undefined) {
-    props.keepNext = parseVal(pPrNode["w:keepNext"]) === true;
+  if (node['w:keepNext'] !== undefined) {
+    props.keepNext = parseVal(node['w:keepNext']) === true
   }
-  if (pPrNode["w:keepLines"] !== undefined) {
-    props.keepLines = parseVal(pPrNode["w:keepLines"]) === true;
+  if (node['w:keepLines'] !== undefined) {
+    props.keepLines = parseVal(node['w:keepLines']) === true
   }
-  if (pPrNode["w:pageBreakBefore"] !== undefined) {
-    props.pageBreakBefore = parseVal(pPrNode["w:pageBreakBefore"]) === true;
+  if (node['w:pageBreakBefore'] !== undefined) {
+    props.pageBreakBefore = parseVal(node['w:pageBreakBefore']) === true
   }
 
-  return props;
+  return props
 }
 
-function parseParagraph(pNode: any): DocxParagraph {
-  const pPr = pNode["w:pPr"];
-  const properties = parseParagraphProperties(pPr);
+function parseParagraph(pNode: unknown): DocxParagraph {
+  if (!pNode || typeof pNode !== 'object') {
+    return {
+      runs: [],
+      properties: {},
+      hasPageBreakBefore: false,
+      hasPageBreakAfter: false,
+      hasImage: false,
+      footnoteRefs: []
+    }
+  }
+  const node = pNode as Record<string, unknown>
+  const pPr = node['w:pPr']
+  const properties = parseParagraphProperties(pPr)
 
-  const runs: DocxRun[] = [];
-  const footnoteRefs: number[] = [];
-  let hasPageBreakBefore = properties.pageBreakBefore === true;
-  let hasImage = false;
+  const runs: DocxRun[] = []
+  const footnoteRefs: number[] = []
+  let hasPageBreakBefore = properties.pageBreakBefore === true
+  let hasImage = false
 
   // Walk through paragraph contents (w:r, w:hyperlink, w:proofErr, w:fldSimple, etc.)
   // We can recursively traverse the w:p node to extract all runs in document order
-  function traverseParagraph(node: any) {
-    if (!node || typeof node !== "object") return;
+  function traverseParagraph(currentNode: unknown) {
+    if (!currentNode || typeof currentNode !== 'object') return
 
-    if (Array.isArray(node)) {
-      for (const item of node) {
-        traverseParagraph(item);
+    if (Array.isArray(currentNode)) {
+      for (const item of currentNode) {
+        traverseParagraph(item)
       }
-      return;
+      return
     }
 
+    const obj = currentNode as Record<string, unknown>
+
     // Process w:r (run)
-    if (node["w:r"]) {
-      const wRs = ensureArray(node["w:r"]);
+    const wR = obj['w:r']
+    if (wR) {
+      const wRs = ensureArray(wR)
       for (const r of wRs) {
-        const rPr = r["w:rPr"];
-        const runProps = parseRunProperties(rPr);
+        if (!r || typeof r !== 'object') continue
+        const rObj = r as Record<string, unknown>
+        const rPr = rObj['w:rPr']
+        const runProps = parseRunProperties(rPr)
 
         // Check if run has text
-        let text = "";
-        if (r["w:t"] !== undefined) {
-          const wTs = ensureArray(r["w:t"]);
-          text = wTs.map(t => getText(t)).join("");
+        let text = ''
+        const wT = rObj['w:t']
+        if (wT !== undefined) {
+          const wTs = ensureArray(wT)
+          text = wTs.map(t => getText(t)).join('')
         }
 
         // Check if run contains a break
-        if (r["w:br"] !== undefined) {
-          const brs = ensureArray(r["w:br"]);
+        const wBr = rObj['w:br']
+        if (wBr !== undefined) {
+          const brs = ensureArray(wBr)
           for (const br of brs) {
-            if (br["@_w:type"] === "page") {
-              hasPageBreakBefore = true; // wait, if page break is inside run, it breaks *after* this text. But we can mark the paragraph as containing a page break.
+            if (br && typeof br === 'object') {
+              const brObj = br as Record<string, unknown>
+              if (brObj['@_w:type'] === 'page') {
+                hasPageBreakBefore = true
+              }
             }
           }
         }
 
         // Check for images
-        if (r["w:drawing"] !== undefined || r["w:pict"] !== undefined) {
-          hasImage = true;
+        if (rObj['w:drawing'] !== undefined || rObj['w:pict'] !== undefined) {
+          hasImage = true
         }
 
         // Check for footnote reference
-        let runFootnoteId: number | undefined;
-        if (r["w:footnoteReference"] !== undefined) {
-          const fnRef = r["w:footnoteReference"];
-          const refId = Number(fnRef["@_w:id"]);
+        let runFootnoteId: number | undefined
+        const fnRef = rObj['w:footnoteReference']
+        if (fnRef !== undefined && typeof fnRef === 'object' && fnRef !== null) {
+          const fnRefObj = fnRef as Record<string, unknown>
+          const refId = Number(fnRefObj['@_w:id'])
           if (!isNaN(refId)) {
-            footnoteRefs.push(refId);
-            runFootnoteId = refId;
+            footnoteRefs.push(refId)
+            runFootnoteId = refId
           }
         }
 
-        if (text || hasImage || r["w:br"] !== undefined || runFootnoteId !== undefined) {
+        if (text || hasImage || wBr !== undefined || runFootnoteId !== undefined) {
           runs.push({
             text,
             properties: runProps,
             footnoteId: runFootnoteId
-          });
+          })
         }
       }
     }
 
     // Recurse into other nodes (like w:hyperlink) to extract nested runs
-    for (const key of Object.keys(node)) {
-      if (key !== "w:r" && key !== "w:pPr" && key !== "@_" && key !== "#text") {
-        traverseParagraph(node[key]);
+    for (const key of Object.keys(obj)) {
+      if (key !== 'w:r' && key !== 'w:pPr' && key !== '@_' && key !== '#text') {
+        traverseParagraph(obj[key])
       }
     }
   }
 
-  traverseParagraph(pNode);
+  traverseParagraph(pNode)
 
-  const hasPageBreakAfter = pPr && pPr["w:sectPr"] !== undefined;
+  const pPrObj = pPr as Record<string, unknown> | undefined
+  const hasPageBreakAfter = pPrObj && pPrObj['w:sectPr'] !== undefined
 
   return {
     runs,
@@ -222,46 +268,75 @@ function parseParagraph(pNode: any): DocxParagraph {
     hasPageBreakAfter: !!hasPageBreakAfter,
     hasImage,
     footnoteRefs
-  };
+  }
 }
 
-function parseStyles(stylesObj: any): {
+function parseStyles(stylesObj: unknown): {
   styles: Map<string, DocxStyle>;
   defaultRunProperties?: RunProperties;
   defaultParagraphProperties?: ParagraphProperties;
 } {
-  const stylesMap = new Map<string, DocxStyle>();
-  let defaultRunProperties: RunProperties | undefined;
-  let defaultParagraphProperties: ParagraphProperties | undefined;
+  const stylesMap = new Map<string, DocxStyle>()
+  let defaultRunProperties: RunProperties | undefined
+  let defaultParagraphProperties: ParagraphProperties | undefined
 
-  if (!stylesObj || !stylesObj["w:styles"]) {
-    return { styles: stylesMap };
+  if (!stylesObj || typeof stylesObj !== 'object') {
+    return { styles: stylesMap }
   }
 
-  const stylesRoot = stylesObj["w:styles"];
+  const rootObj = stylesObj as Record<string, unknown>
+  const stylesRoot = rootObj['w:styles']
+  if (!stylesRoot || typeof stylesRoot !== 'object') {
+    return { styles: stylesMap }
+  }
+
+  const stylesRootObj = stylesRoot as Record<string, unknown>
 
   // 1. Parse docDefaults
-  if (stylesRoot["w:docDefaults"]) {
-    const defaults = stylesRoot["w:docDefaults"];
-    if (defaults["w:rPrDefault"] && defaults["w:rPrDefault"]["w:rPr"]) {
-      defaultRunProperties = parseRunProperties(defaults["w:rPrDefault"]["w:rPr"]);
+  const docDefaults = stylesRootObj['w:docDefaults']
+  if (docDefaults && typeof docDefaults === 'object') {
+    const defaultsObj = docDefaults as Record<string, unknown>
+    const rPrDefault = defaultsObj['w:rPrDefault']
+    if (rPrDefault && typeof rPrDefault === 'object') {
+      const rPrDefaultObj = rPrDefault as Record<string, unknown>
+      if (rPrDefaultObj['w:rPr']) {
+        defaultRunProperties = parseRunProperties(rPrDefaultObj['w:rPr'])
+      }
     }
-    if (defaults["w:pPrDefault"] && defaults["w:pPrDefault"]["w:pPr"]) {
-      defaultParagraphProperties = parseParagraphProperties(defaults["w:pPrDefault"]["w:pPr"]);
+    const pPrDefault = defaultsObj['w:pPrDefault']
+    if (pPrDefault && typeof pPrDefault === 'object') {
+      const pPrDefaultObj = pPrDefault as Record<string, unknown>
+      if (pPrDefaultObj['w:pPr']) {
+        defaultParagraphProperties = parseParagraphProperties(pPrDefaultObj['w:pPr'])
+      }
     }
   }
 
   // 2. Parse individual styles
-  if (stylesRoot["w:style"]) {
-    const stylesList = ensureArray(stylesRoot["w:style"]);
-    for (const styleNode of stylesList) {
-      const styleId = String(styleNode["@_w:styleId"]);
-      const name = styleNode["w:name"] ? String(styleNode["w:name"]["@_w:val"]) : "";
-      const type = String(styleNode["@_w:type"] || "paragraph");
-      const basedOn = styleNode["w:basedOn"] ? String(styleNode["w:basedOn"]["@_w:val"]) : undefined;
+  const styleNode = stylesRootObj['w:style']
+  if (styleNode) {
+    const stylesList = ensureArray(styleNode)
+    for (const styleNodeItem of stylesList) {
+      if (!styleNodeItem || typeof styleNodeItem !== 'object') continue
+      const styleObj = styleNodeItem as Record<string, unknown>
+      const styleId = String(styleObj['@_w:styleId'])
+      
+      const wName = styleObj['w:name']
+      let name = ''
+      if (wName && typeof wName === 'object') {
+        name = String((wName as Record<string, unknown>)['@_w:val'])
+      }
 
-      const runProperties = parseRunProperties(styleNode["w:rPr"]);
-      const paragraphProperties = parseParagraphProperties(styleNode["w:pPr"]);
+      const type = String(styleObj['@_w:type'] || 'paragraph')
+
+      const wBasedOn = styleObj['w:basedOn']
+      let basedOn: string | undefined
+      if (wBasedOn && typeof wBasedOn === 'object') {
+        basedOn = String((wBasedOn as Record<string, unknown>)['@_w:val'])
+      }
+
+      const runProperties = parseRunProperties(styleObj['w:rPr'])
+      const paragraphProperties = parseParagraphProperties(styleObj['w:pPr'])
 
       stylesMap.set(styleId, {
         styleId,
@@ -270,7 +345,7 @@ function parseStyles(stylesObj: any): {
         basedOn,
         runProperties,
         paragraphProperties
-      });
+      })
     }
   }
 
@@ -278,109 +353,131 @@ function parseStyles(stylesObj: any): {
     styles: stylesMap,
     defaultRunProperties,
     defaultParagraphProperties
-  };
+  }
 }
 
 export async function parseDocx(filePath: string): Promise<ParsedDocument> {
-  const fileBuffer = fs.readFileSync(filePath);
-  const zip = await JSZip.loadAsync(fileBuffer);
+  const fileBuffer = fs.readFileSync(filePath)
+  const zip = await JSZip.loadAsync(fileBuffer)
 
-  const docXmlFile = zip.file("word/document.xml");
+  const docXmlFile = zip.file('word/document.xml')
   if (!docXmlFile) {
-    throw new Error("Invalid DOCX file: missing word/document.xml");
+    throw new Error('Invalid DOCX file: missing word/document.xml')
   }
 
   const xmlParser = new XMLParser({
     ignoreAttributes: false,
-    attributeNamePrefix: "@_",
+    attributeNamePrefix: '@_',
     parseAttributeValue: true,
     allowBooleanAttributes: true,
     trimValues: false
-  });
+  })
 
-  const docXmlText = await docXmlFile.async("text");
-  const docObj = xmlParser.parse(docXmlText);
-  const body = docObj["w:document"]?.["w:body"];
+  const docXmlText = await docXmlFile.async('text')
+  const docObj = xmlParser.parse(docXmlText) as unknown
+  if (!docObj || typeof docObj !== 'object') {
+    throw new Error('Invalid DOCX structure in word/document.xml')
+  }
+  const docObjRecord = docObj as Record<string, unknown>
+  const wDocument = docObjRecord['w:document']
+  if (!wDocument || typeof wDocument !== 'object') {
+    throw new Error('Invalid DOCX structure: missing w:document in word/document.xml')
+  }
+  const wDocumentRecord = wDocument as Record<string, unknown>
+  const body = wDocumentRecord['w:body']
   if (!body) {
-    throw new Error("Invalid DOCX structure: missing w:body in word/document.xml");
+    throw new Error('Invalid DOCX structure: missing w:body in word/document.xml')
   }
 
   // Parse styles.xml if present
-  const stylesXmlFile = zip.file("word/styles.xml");
-  let stylesMap = new Map<string, DocxStyle>();
-  let defaultRunProperties: RunProperties | undefined;
-  let defaultParagraphProperties: ParagraphProperties | undefined;
+  const stylesXmlFile = zip.file('word/styles.xml')
+  let stylesMap = new Map<string, DocxStyle>()
+  let defaultRunProperties: RunProperties | undefined
+  let defaultParagraphProperties: ParagraphProperties | undefined
 
   if (stylesXmlFile) {
-    const stylesXmlText = await stylesXmlFile.async("text");
-    const stylesObj = xmlParser.parse(stylesXmlText);
-    const parsedStyles = parseStyles(stylesObj);
-    stylesMap = parsedStyles.styles;
-    defaultRunProperties = parsedStyles.defaultRunProperties;
-    defaultParagraphProperties = parsedStyles.defaultParagraphProperties;
+    const stylesXmlText = await stylesXmlFile.async('text')
+    const stylesObj = xmlParser.parse(stylesXmlText)
+    const parsedStyles = parseStyles(stylesObj)
+    stylesMap = parsedStyles.styles
+    defaultRunProperties = parsedStyles.defaultRunProperties
+    defaultParagraphProperties = parsedStyles.defaultParagraphProperties
   }
 
   // Parse footnotes.xml if present
-  const footnotesXmlFile = zip.file("word/footnotes.xml");
-  const footnotes: DocxFootnote[] = [];
+  const footnotesXmlFile = zip.file('word/footnotes.xml')
+  const footnotes: DocxFootnote[] = []
 
   if (footnotesXmlFile) {
-    const footnotesXmlText = await footnotesXmlFile.async("text");
-    const footnotesObj = xmlParser.parse(footnotesXmlText);
-    if (footnotesObj["w:footnotes"] && footnotesObj["w:footnotes"]["w:footnote"]) {
-      const fnList = ensureArray(footnotesObj["w:footnotes"]["w:footnote"]);
-      for (const fnNode of fnList) {
-        const id = Number(fnNode["@_w:id"]);
-        // Ignore separator and continuationSeparator footnotes (usually negative IDs)
-        if (!isNaN(id) && id >= 0) {
-          const fnParas: DocxParagraph[] = [];
-          if (fnNode["w:p"]) {
-            const wPs = ensureArray(fnNode["w:p"]);
-            for (const wp of wPs) {
-              fnParas.push(parseParagraph(wp));
+    const footnotesXmlText = await footnotesXmlFile.async('text')
+    const footnotesObj = xmlParser.parse(footnotesXmlText) as unknown
+    if (footnotesObj && typeof footnotesObj === 'object') {
+      const footnotesObjRecord = footnotesObj as Record<string, unknown>
+      const wFootnotes = footnotesObjRecord['w:footnotes']
+      if (wFootnotes && typeof wFootnotes === 'object') {
+        const wFootnotesRecord = wFootnotes as Record<string, unknown>
+        const wFootnote = wFootnotesRecord['w:footnote']
+        if (wFootnote) {
+          const fnList = ensureArray(wFootnote)
+          for (const fnNode of fnList) {
+            if (!fnNode || typeof fnNode !== 'object') continue
+            const fnNodeRecord = fnNode as Record<string, unknown>
+            const id = Number(fnNodeRecord['@_w:id'])
+            // Ignore separator and continuationSeparator footnotes (usually negative IDs)
+            if (!isNaN(id) && id >= 0) {
+              const fnParas: DocxParagraph[] = []
+              const wP = fnNodeRecord['w:p']
+              if (wP) {
+                const wPs = ensureArray(wP)
+                for (const wp of wPs) {
+                  fnParas.push(parseParagraph(wp))
+                }
+              }
+              footnotes.push({
+                id,
+                paragraphs: fnParas
+              })
             }
           }
-          footnotes.push({
-            id,
-            paragraphs: fnParas
-          });
         }
       }
     }
   }
 
   // Collect all paragraphs in document.xml w:body recursively
-  const paragraphs: DocxParagraph[] = [];
-  
-  function collectAllParagraphs(node: any) {
-    if (!node || typeof node !== "object") return;
+  const paragraphs: DocxParagraph[] = []
+
+  function collectAllParagraphs(node: unknown) {
+    if (!node || typeof node !== 'object') return
 
     if (Array.isArray(node)) {
       for (const item of node) {
-        collectAllParagraphs(item);
+        collectAllParagraphs(item)
       }
-      return;
+      return
     }
 
-    if (node["w:p"]) {
-      const wPs = ensureArray(node["w:p"]);
+    const obj = node as Record<string, unknown>
+    const wP = obj['w:p']
+    if (wP) {
+      const wPs = ensureArray(wP)
       for (const wp of wPs) {
-        paragraphs.push(parseParagraph(wp));
+        paragraphs.push(parseParagraph(wp))
       }
     }
 
     // Recurse into all other keys except w:p to find tables and other structures in order
-    for (const key of Object.keys(node)) {
-      if (key !== "w:p" && key !== "@_" && key !== "#text") {
-        collectAllParagraphs(node[key]);
+    for (const key of Object.keys(obj)) {
+      if (key !== 'w:p' && key !== '@_' && key !== '#text') {
+        collectAllParagraphs(obj[key])
       }
     }
   }
 
-  collectAllParagraphs(body);
+  collectAllParagraphs(body)
 
   // Check if any header or footer XML files exist in the zip
-  const hasHeaderOrFooter = zip.file(/^word\/(header|footer)\d*\.xml$/).length > 0;
+  const hasHeaderOrFooter = zip.file(/^word\/(header|footer)\d*\.xml$/).length > 0
 
   return {
     paragraphs,
@@ -389,5 +486,5 @@ export async function parseDocx(filePath: string): Promise<ParsedDocument> {
     defaultRunProperties,
     defaultParagraphProperties,
     hasHeaderOrFooter
-  };
+  }
 }

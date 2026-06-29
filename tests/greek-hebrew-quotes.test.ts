@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils.js";
-import { greekHebrewQuotesRule } from "../src/rules/definitions/greek-hebrew-quotes.js";
+import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils";
+import { greekHebrewQuotesRule } from "../src/rules/definitions/greek-hebrew-quotes";
 
 describe("Rule 13: Greek and Hebrew Quotes Check", () => {
   it.each([

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detectSblReferences, isWithinReference, isSblReferenceFootnote } from "../src/rules/sbl-reference-detector.js";
+import { detectSblReferences, isWithinReference, isSblReferenceFootnote } from "../src/rules/sbl-reference-detector";
 
 describe("SBL v2 Reference Detector", () => {
   describe("Positive Cases (Bibliographic References)", () => {

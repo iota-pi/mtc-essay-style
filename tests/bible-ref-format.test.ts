@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils.js";
-import { DocumentSections } from "../src/analysis/sections.js";
-import { bibleRefFormatRule } from "../src/rules/definitions/bible-ref-format.js";
+import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils";
+import { DocumentSections } from "../src/analysis/sections";
+import { bibleRefFormatRule } from "../src/rules/definitions/bible-ref-format";
 
 describe("Rule 2: Bible Reference Format", () => {
   it.each([
     { citation: "Gen1:1", found: "Gen1", expected: "Gen 1" },
-    { citation: "1Cor13:4", found: "1Cor13", expected: "1Cor 13" }
+    { citation: "1Cor13:4", found: "1Cor13", expected: "1 Cor 13" }
   ])("should flag missing space in $citation", ({ citation, found, expected }) => {
     const doc = createTestDocument({
       paragraphs: [createTestParagraph(`Scripture tells us in ${citation}.`)]

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils.js";
-import { DocumentSections } from "../src/analysis/sections.js";
-import { abbreviationStyleRule } from "../src/rules/definitions/abbreviation-style.js";
+import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils";
+import { DocumentSections } from "../src/analysis/sections";
+import { abbreviationStyleRule } from "../src/rules/definitions/abbreviation-style";
 
 describe("Rule 4: Abbreviation Punctuation and Capitalisation", () => {
   it.each([

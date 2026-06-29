@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils.js";
-import { DocumentSections } from "../src/analysis/sections.js";
-import { lineSpacingRule } from "../src/rules/definitions/line-spacing.js";
+import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils";
+import { DocumentSections } from "../src/analysis/sections";
+import { lineSpacingRule } from "../src/rules/definitions/line-spacing";
 
 describe("Rule 7: Double Line Spacing", () => {
   it("should flag paragraph that is not double line spacing", () => {

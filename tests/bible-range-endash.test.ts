@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils.js";
-import { DocumentSections } from "../src/analysis/sections.js";
-import { bibleRangeEndashRule } from "../src/rules/definitions/bible-range-endash.js";
+import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils";
+import { DocumentSections } from "../src/analysis/sections";
+import { bibleRangeEndashRule } from "../src/rules/definitions/bible-range-endash";
 
 describe("Rule 10: Bible Range Dash Check", () => {
   it.each([

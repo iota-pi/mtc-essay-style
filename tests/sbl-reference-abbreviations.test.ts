@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils.js";
-import { sblReferenceAbbreviationsRule } from "../src/rules/definitions/sbl-reference-abbreviations.js";
+import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils";
+import { sblReferenceAbbreviationsRule } from "../src/rules/definitions/sbl-reference-abbreviations";
 
 describe("Rule 12: SBL Reference Abbreviations", () => {
   it("should flag unabbreviated forms outside parentheses mid-sentence", () => {

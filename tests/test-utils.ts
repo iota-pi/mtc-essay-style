@@ -35,10 +35,10 @@ export function cleanTempDir() {
   }
 }
 
-import { ParsedDocument, DocxParagraph } from "../src/docx/types.js";
-import { DocumentSections } from "../src/analysis/sections.js";
-import { RuleContext } from "../src/rules/types.js";
-import { resolveRunProperties, resolveParagraphProperties } from "../src/docx/style-resolver.js";
+import { ParsedDocument, DocxParagraph } from "../src/docx/types";
+import { DocumentSections } from "../src/analysis/sections";
+import { RuleContext } from "../src/rules/types";
+import { resolveRunProperties, resolveParagraphProperties } from "../src/docx/style-resolver";
 
 /** Create a minimal DocxParagraph with text and optional overrides */
 export function createTestParagraph(text: string, overrides?: Partial<DocxParagraph>): DocxParagraph {

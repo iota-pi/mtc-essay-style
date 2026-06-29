@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils.js";
-import { DocumentSections } from "../src/analysis/sections.js";
-import { bibleRefsInFootnotesRule } from "../src/rules/definitions/bible-refs-in-footnotes.js";
+import { createTestParagraph, createTestDocument, createTestContext } from "./test-utils";
+import { DocumentSections } from "../src/analysis/sections";
+import { bibleRefsInFootnotesRule } from "../src/rules/definitions/bible-refs-in-footnotes";
 
 describe("Rule 1: Bible References in Footnotes", () => {
   it("should flag Bible references inside footnotes", () => {
