@@ -1,5 +1,5 @@
 import { StyleRule, StyleViolation } from '../types'
-import { SBL_VALID_ABBREVIATIONS, SBL_BOOK_MAP, COMMON_WRONG_ABBREVIATIONS } from '../data/sbl-books'
+import { SBL_VALID_ABBREVIATIONS, SBL_BOOK_MAP, COMMON_WRONG_ABBREVIATIONS, SBL_ABBREV_TO_FULL } from '../data/sbl-books'
 import { getParagraphText, findParagraphIndex, getRegionForParagraph, getParagraphSnippet } from '../utils'
 import { DocumentRegion } from '../../analysis/sections'
 
@@ -14,6 +14,32 @@ const bookAlternation = sortedNamesPattern(ALL_BOOK_NAMES)
 
 function sortedNamesPattern(names: string[]): string {
   return names.map(name => escapeRegExp(name)).join('|')
+}
+
+function getCanonicalBookName(book: string): string {
+  const lower = book.toLowerCase().trim()
+  
+  // 1. Check if it's in COMMON_WRONG_ABBREVIATIONS
+  if (COMMON_WRONG_ABBREVIATIONS.has(lower)) {
+    return COMMON_WRONG_ABBREVIATIONS.get(lower)!
+  }
+
+  // 2. Check if it's a lowercase version of a valid abbreviation
+  for (const abbrev of SBL_VALID_ABBREVIATIONS) {
+    if (abbrev.toLowerCase() === lower) {
+      return abbrev
+    }
+  }
+
+  // 3. Check if it's a lowercase version of a full book name
+  for (const full of SBL_ABBREV_TO_FULL.values()) {
+    if (full.toLowerCase() === lower) {
+      return full
+    }
+  }
+
+  // 4. Default: return the original book as is
+  return book
 }
 
 export const bibleRefFormatRule: StyleRule = {
@@ -48,7 +74,7 @@ export const bibleRefFormatRule: StyleRule = {
         const fullMatch = match[0]
         const book = match[1]
         const num = match[2]
-        const expected = book + ' ' + num
+        const expected = getCanonicalBookName(book) + ' ' + num
         violations.push({
           ruleId: bibleRefFormatRule.id,
           ruleName: bibleRefFormatRule.name,
@@ -71,7 +97,7 @@ export const bibleRefFormatRule: StyleRule = {
         const fullMatch = match[0]
         const book = match[1]
         const num = match[2]
-        const expected = book + ' ' + num
+        const expected = getCanonicalBookName(book) + ' ' + num
         violations.push({
           ruleId: bibleRefFormatRule.id,
           ruleName: bibleRefFormatRule.name,
@@ -96,11 +122,12 @@ export const bibleRefFormatRule: StyleRule = {
         const chapter = match[2]
         const verse1 = match[3]
         const verse2 = match[4]
+        const canonicalBook = getCanonicalBookName(book)
         let expected: string
         if (verse1 !== undefined) {
-          expected = `${book} ${chapter}:${verse1}, ${verse2}`
+          expected = `${canonicalBook} ${chapter}:${verse1}, ${verse2}`
         } else {
-          expected = `${book} ${chapter}:${verse2}`
+          expected = `${canonicalBook} ${chapter}:${verse2}`
         }
         violations.push({
           ruleId: bibleRefFormatRule.id,
