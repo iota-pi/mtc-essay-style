@@ -74,7 +74,7 @@ export function matchReferencesToBibliography(
           bestMatch = entry
           bestConfidence = 'exact'
           break
-        } else if (confidence === 'partial' && bestConfidence !== 'exact') {
+        } else if (confidence === 'partial' && (bestConfidence as string) !== 'exact') {
           bestMatch = entry
           bestConfidence = 'partial'
         }

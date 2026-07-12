@@ -16,6 +16,7 @@ import { quotationEllipsisRule } from './definitions/quotation-ellipsis'
 import { bibliographyRequiredRule } from './definitions/bibliography-required'
 import { footnoteCitationFormatRule } from './definitions/footnote-citation-format'
 import { bibliographyCompletenessRule } from './definitions/bibliography-completeness'
+import { multipleWhitespacesRule } from './definitions/multiple-whitespaces'
 
 // Import and register all style rules.
 export const defaultRegistry = new RuleRegistry()
@@ -36,7 +37,8 @@ defaultRegistry.registerAll([
   quotationEllipsisRule,
   bibliographyRequiredRule,
   footnoteCitationFormatRule,
-  bibliographyCompletenessRule
+  bibliographyCompletenessRule,
+  multipleWhitespacesRule
 ])
 
 export { RuleRegistry } from './registry'
