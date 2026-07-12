@@ -13,6 +13,9 @@ import { bodyEndashRule } from './definitions/body-endash'
 import { sblReferenceAbbreviationsRule } from './definitions/sbl-reference-abbreviations'
 import { greekHebrewQuotesRule } from './definitions/greek-hebrew-quotes'
 import { quotationEllipsisRule } from './definitions/quotation-ellipsis'
+import { bibliographyRequiredRule } from './definitions/bibliography-required'
+import { footnoteCitationFormatRule } from './definitions/footnote-citation-format'
+import { bibliographyCompletenessRule } from './definitions/bibliography-completeness'
 
 // Import and register all style rules.
 export const defaultRegistry = new RuleRegistry()
@@ -30,7 +33,10 @@ defaultRegistry.registerAll([
   bodyEndashRule,
   sblReferenceAbbreviationsRule,
   greekHebrewQuotesRule,
-  quotationEllipsisRule
+  quotationEllipsisRule,
+  bibliographyRequiredRule,
+  footnoteCitationFormatRule,
+  bibliographyCompletenessRule
 ])
 
 export { RuleRegistry } from './registry'

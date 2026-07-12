@@ -15,8 +15,10 @@ function createParagraph(text: string): DocxParagraph {
   };
 }
 
+import { bibliographyRequiredRule } from "../src/rules/definitions/bibliography-required";
+
 describe("Rule Runner", () => {
-  it("should warn if no bibliography is present", () => {
+  it("should report violation if no bibliography is present and required rule is registered", () => {
     const doc: ParsedDocument = {
       paragraphs: [createParagraph("Body text")],
       footnotes: [],
@@ -32,12 +34,13 @@ describe("Rule Runner", () => {
     };
 
     const registry = new RuleRegistry();
+    registry.register(bibliographyRequiredRule);
     const result = runChecks(doc, sections, registry);
 
-    expect(result.rulesRun).toBe(0);
+    expect(result.rulesRun).toBe(1);
     expect(result.violations.length).toBe(1);
-    expect(result.violations[0].ruleId).toBe("builtin-bibliography-check");
-    expect(result.violations[0].severity).toBe("warning");
+    expect(result.violations[0].ruleId).toBe("sbl-bibliography-required");
+    expect(result.violations[0].severity).toBe("error");
   });
 
   it("should run registered rules and collect violations", () => {

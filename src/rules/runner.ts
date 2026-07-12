@@ -44,16 +44,6 @@ export function runChecks(
     }
   }
 
-  // Built-in check: warn if no bibliography is detected
-  if (!sections.hasBibliography) {
-    violations.push({
-      ruleId: 'builtin-bibliography-check',
-      ruleName: 'Bibliography Detection',
-      severity: 'warning',
-      message: "No bibliography section detected at the end of the document. Ensure you have a bibliography page with a heading like 'Bibliography' or 'References'."
-    })
-  }
-
   return {
     violations,
     wordCount,

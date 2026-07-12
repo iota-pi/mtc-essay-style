@@ -251,3 +251,103 @@ export function isWithinReference(index: number, spans: SblReferenceSpan[]): boo
 export function isSblReferenceFootnote(text: string): boolean {
   return detectSblReferences(text).length > 0
 }
+
+export interface SblReferenceFields {
+  span: SblReferenceSpan;
+  text: string;
+  author?: string;
+  title?: string;
+  year?: string;
+  containerTitle?: string;
+}
+
+const CHAPTER_EXTRACT_REGEX = new RegExp(
+  `^${PREFIX}(${AUTHOR}),\\s+(?:[“"]([^“”"]*?)[”"]|[‘']([^‘’']*?)[’']),?\\s+[Ii]n\\s+([^,]+),\\s*(?:[Ee]d\\.|[Tt]rans\\.|[Ee]dited\\s+by)\\s+[^(\\n]+\\(([^)]+)\\)`,
+  'i'
+)
+
+const JOURNAL_EXTRACT_REGEX = new RegExp(
+  `^${PREFIX}(${AUTHOR}),\\s+(?:[“"]([^“”"]*?)[”"]|[‘']([^‘’']*?)[’']),?\\s+([^(\\n]+?)\\s+\\d+(?:\\.\\d+)?\\s*\\((\\d{4})\\)`,
+  'i'
+)
+
+const BOOK_EXTRACT_REGEX = new RegExp(
+  `^${PREFIX}(${AUTHOR}),\\s+([^(\\n]+?)\\s*\\(([^)]+)\\)`,
+  'i'
+)
+
+const SHORT_EXTRACT_REGEX = new RegExp(
+  `^${PREFIX}(${AUTHOR}),\\s+(?:(?:[“"]([^“”"]*?)[”"]|[‘']([^‘’']*?)[’'])(?:,\\s*|\\s*)|([^,]+),\\s*)`,
+  'i'
+)
+
+function extractFirstAuthorSurname(authorStr: string): string {
+  if (!authorStr) return ''
+  const firstAuthor = authorStr.split(/,|\band\b|&/)[0].trim().replace(/\s+et\s+al\.?$/i, '')
+  const parts = firstAuthor.split(/\s+/).filter(p => p.length > 0)
+  if (parts.length === 0) return ''
+  return parts[parts.length - 1].replace(/[.,]/g, '').trim()
+}
+
+function extractYear(text: string): string | undefined {
+  const matches = text.match(/\b\d{4}\b/g)
+  if (matches && matches.length > 0) {
+    return matches[matches.length - 1]
+  }
+  return undefined
+}
+
+export function extractReferenceFields(text: string, span: SblReferenceSpan): SblReferenceFields {
+  const spanText = text.substring(span.start, span.end).trim()
+  const fields: SblReferenceFields = {
+    span,
+    text: spanText
+  }
+
+  if (span.type === 'ibid-reference') {
+    return fields
+  }
+
+  let match: RegExpExecArray | null = null
+  if (span.type === 'chapter-first') {
+    match = CHAPTER_EXTRACT_REGEX.exec(spanText)
+    if (match) {
+      const authorStr = match[1]
+      fields.author = extractFirstAuthorSurname(authorStr)
+      fields.title = (match[2] || match[3] || '').trim().replace(/,\s*$/, '').trim()
+      fields.containerTitle = match[4].trim()
+      fields.year = extractYear(match[5])
+    }
+  } else if (span.type === 'journal-first') {
+    match = JOURNAL_EXTRACT_REGEX.exec(spanText)
+    if (match) {
+      const authorStr = match[1]
+      fields.author = extractFirstAuthorSurname(authorStr)
+      fields.title = (match[2] || match[3] || '').trim().replace(/,\s*$/, '').trim()
+      fields.containerTitle = match[4].trim()
+      fields.year = match[5]
+    }
+  } else if (span.type === 'book-first') {
+    match = BOOK_EXTRACT_REGEX.exec(spanText)
+    if (match) {
+      const authorStr = match[1]
+      fields.author = extractFirstAuthorSurname(authorStr)
+      fields.title = match[2].trim().replace(/,\s*$/, '').trim()
+      fields.year = extractYear(match[3])
+    }
+  } else if (span.type === 'short-reference') {
+    match = SHORT_EXTRACT_REGEX.exec(spanText)
+    if (match) {
+      const authorStr = match[1]
+      fields.author = extractFirstAuthorSurname(authorStr)
+      fields.title = (match[2] || match[3] || match[4] || '').trim().replace(/,\s*$/, '').trim()
+    }
+  }
+
+  return fields
+}
+
+export function detectAndExtractReferences(text: string): SblReferenceFields[] {
+  const spans = detectSblReferences(text)
+  return spans.map(span => extractReferenceFields(text, span))
+}

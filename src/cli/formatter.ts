@@ -11,11 +11,9 @@ export function formatText(result: CheckResult, filePath: string, minSeverity: s
 
   // Word counts
   lines.push(chalk.bold('Word Count Summary:'))
-  lines.push(`  Total Words (Body + Footnotes): ${chalk.bold.green(result.wordCount.total)}`)
-  lines.push(`  - Body Text:                  ${result.wordCount.bodyText}`)
-  lines.push(`  - Footnotes:                  ${result.wordCount.footnotes}`)
-  lines.push(`  - Title Page:                 ${result.wordCount.titlePage}`)
-  lines.push(`  - Bibliography:               ${result.wordCount.bibliography}`)
+  lines.push(`  Total Words: ${chalk.bold.green(result.wordCount.total)}`)
+  lines.push(`  - Body Text: ${result.wordCount.bodyText}`)
+  lines.push(`  - Footnotes: ${result.wordCount.footnotes}`)
   lines.push('')
 
   // Violations

@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { detectSblReferences, isWithinReference, isSblReferenceFootnote } from "../src/rules/sbl-reference-detector";
+import {
+  detectSblReferences,
+  isWithinReference,
+  isSblReferenceFootnote,
+  detectAndExtractReferences,
+  extractReferenceFields
+} from "../src/rules/sbl-reference-detector";
 
 describe("SBL v2 Reference Detector", () => {
   describe("Positive Cases (Bibliographic References)", () => {
@@ -208,6 +214,53 @@ describe("SBL v2 Reference Detector", () => {
     it("should verify isSblReferenceFootnote works correctly", () => {
       expect(isSblReferenceFootnote("Talbert, Reading John, 145.")).toBe(true);
       expect(isSblReferenceFootnote("Just some comments.")).toBe(false);
+    });
+  });
+
+  describe("Field Extraction", () => {
+    it("should extract fields from book first reference", () => {
+      const text = "Charles H. Talbert, Reading John: A Literary and Theological Commentary (New York: Crossroad, 1992), 127.";
+      const refs = detectAndExtractReferences(text);
+      expect(refs.length).toBe(1);
+      expect(refs[0].author).toBe("Talbert");
+      expect(refs[0].title).toBe("Reading John: A Literary and Theological Commentary");
+      expect(refs[0].year).toBe("1992");
+    });
+
+    it("should extract fields from journal first reference", () => {
+      const text = 'Blake Leyerle, "John Chrysostom on the Gaze," JECS 1 (1993): 159–74.';
+      const refs = detectAndExtractReferences(text);
+      expect(refs.length).toBe(1);
+      expect(refs[0].author).toBe("Leyerle");
+      expect(refs[0].title).toBe("John Chrysostom on the Gaze");
+      expect(refs[0].containerTitle).toBe("JECS");
+      expect(refs[0].year).toBe("1993");
+    });
+
+    it("should extract fields from chapter first reference", () => {
+      const text = 'Harold W. Attridge, "Jewish Historiography," in Early Judaism and Its Modern Interpreters, ed. Robert A. Kraft (Philadelphia: Fortress, 1986), 311–43.';
+      const refs = detectAndExtractReferences(text);
+      expect(refs.length).toBe(1);
+      expect(refs[0].author).toBe("Attridge");
+      expect(refs[0].title).toBe("Jewish Historiography");
+      expect(refs[0].containerTitle).toBe("Early Judaism and Its Modern Interpreters");
+      expect(refs[0].year).toBe("1986");
+    });
+
+    it("should extract fields from short reference", () => {
+      const text = "Talbert, Reading John, 145.";
+      const refs = detectAndExtractReferences(text);
+      expect(refs.length).toBe(1);
+      expect(refs[0].author).toBe("Talbert");
+      expect(refs[0].title).toBe("Reading John");
+    });
+
+    it("should extract fields from quoted short reference", () => {
+      const text = 'Leyerle, "John Chrysostom," 162.';
+      const refs = detectAndExtractReferences(text);
+      expect(refs.length).toBe(1);
+      expect(refs[0].author).toBe("Leyerle");
+      expect(refs[0].title).toBe("John Chrysostom");
     });
   });
 });

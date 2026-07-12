@@ -18,7 +18,7 @@ function sortedNamesPattern(names: string[]): string {
 
 function getCanonicalBookName(book: string): string {
   const lower = book.toLowerCase().trim()
-  
+
   // 1. Check if it's in COMMON_WRONG_ABBREVIATIONS
   if (COMMON_WRONG_ABBREVIATIONS.has(lower)) {
     return COMMON_WRONG_ABBREVIATIONS.get(lower)!
