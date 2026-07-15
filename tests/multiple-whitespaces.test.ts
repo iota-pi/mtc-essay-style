@@ -127,4 +127,23 @@ describe("Multiple Consecutive Whitespaces Rule", () => {
     const violations = multipleWhitespacesRule.check(context)
     expect(violations.length).toBe(0)
   })
+
+  it("should trim leading whitespace from paragraphSnippet", () => {
+    const doc = createTestDocument({
+      paragraphs: [
+        createTestParagraph("   Leading spaces and then  double spaces.")
+      ]
+    })
+    const sections: DocumentSections = {
+      titlePage: [],
+      body: doc.paragraphs,
+      bibliography: [],
+      hasTitlePage: false,
+      hasBibliography: false
+    }
+    const context = createTestContext(doc, sections)
+    const violations = multipleWhitespacesRule.check(context)
+    expect(violations.length).toBe(2)
+    expect(violations[0].paragraphSnippet).toBe("Leading spaces and then  double spaces.")
+  })
 })

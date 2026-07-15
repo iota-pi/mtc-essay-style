@@ -32,7 +32,16 @@ export const bibliographyCompletenessRule: StyleRule = {
         if (!entry.publisher) {
           issues.push('Missing publisher')
         }
-        if (!entry.location) {
+        
+        let needsLocation = true
+        if (entry.year) {
+          const yearNum = parseInt(entry.year, 10)
+          if (!isNaN(yearNum) && yearNum > 1900) {
+            needsLocation = false
+          }
+        }
+
+        if (needsLocation && !entry.location) {
           issues.push('Missing place of publication (location)')
         }
       }

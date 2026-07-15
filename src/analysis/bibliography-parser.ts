@@ -25,6 +25,80 @@ const BIBLIOGRAPHY_HEADINGS = new Set([
 ])
 
 const AUTHOR_FIELD_REGEX = /^[A-Z][A-Za-z\s\-’,]+?,\s+[A-Z][A-Za-z\s\-’.,&()]+?\./
+const SAME_AUTHOR_REGEX = /^(?:—{2,3}|_{3,}|-{3,})\./
+
+function parsePublicationInfo(text: string): { location?: string; publisher?: string; year?: string; cleanTextBefore: string } {
+  const yearMatch = text.match(/,\s*(\d{4})\.?$/)
+  if (!yearMatch) {
+    return { cleanTextBefore: text }
+  }
+
+  const year = yearMatch[1]
+  const textBeforeYear = text.substring(0, text.length - yearMatch[0].length).trim()
+
+  const lastColonIndex = textBeforeYear.lastIndexOf(':')
+  if (lastColonIndex !== -1) {
+    const potentialLocationPart = textBeforeYear.substring(0, lastColonIndex).trim()
+    const publisherPart = textBeforeYear.substring(lastColonIndex + 1).trim()
+
+    const lastPeriodIndex = potentialLocationPart.lastIndexOf('. ')
+    if (lastPeriodIndex !== -1) {
+      const titlePart = potentialLocationPart.substring(0, lastPeriodIndex).trim()
+      const locationPart = potentialLocationPart.substring(lastPeriodIndex + 2).trim()
+      return {
+        location: locationPart,
+        publisher: publisherPart,
+        year,
+        cleanTextBefore: titlePart
+      }
+    } else {
+      return {
+        location: potentialLocationPart,
+        publisher: publisherPart,
+        year,
+        cleanTextBefore: ''
+      }
+    }
+  }
+
+  const segments = textBeforeYear.split(/\.\s+/)
+  if (segments.length === 1) {
+    return {
+      publisher: segments[0].trim(),
+      year,
+      cleanTextBefore: ''
+    }
+  }
+
+  const publisherKeywords = new Set([
+    'co', 'co.', 'inc', 'inc.', 'ltd', 'ltd.', 'press', 'pub', 'pub.', 'publishing', 'publisher', 'publishers', 'books', 'publications', 'academic'
+  ])
+
+  let publisherSegmentsCount = 1
+  for (let i = segments.length - 1; i > 0; i--) {
+    const currentSegment = segments[i].trim().toLowerCase()
+    const prevSegment = segments[i - 1].trim().toLowerCase()
+
+    const isCurrentKeyword = publisherKeywords.has(currentSegment) || publisherKeywords.has(currentSegment.replace(/\.$/, ''))
+    const isPrevEndingInKeyword = Array.from(publisherKeywords).some(kw => prevSegment.endsWith(kw))
+    const isPrevInitials = /^[a-z](?:\.[a-z])*$/.test(prevSegment)
+
+    if (isCurrentKeyword || isPrevEndingInKeyword || isPrevInitials) {
+      publisherSegmentsCount++
+    } else {
+      break
+    }
+  }
+
+  const titleSegments = segments.slice(0, segments.length - publisherSegmentsCount)
+  const publisherSegments = segments.slice(segments.length - publisherSegmentsCount)
+
+  return {
+    publisher: publisherSegments.join('. ').trim(),
+    year,
+    cleanTextBefore: titleSegments.join('. ').trim()
+  }
+}
 
 export function parseBibliography(paragraphs: DocxParagraph[]): BibliographyEntry[] {
   const entries: BibliographyEntry[] = []
@@ -36,6 +110,8 @@ export function parseBibliography(paragraphs: DocxParagraph[]): BibliographyEntr
     startIndex = 1
   }
 
+  let lastAuthor = ''
+
   for (let i = startIndex; i < paragraphs.length; i++) {
     const rawText = getParagraphText(paragraphs[i]).trim()
     if (!rawText) continue
@@ -46,18 +122,46 @@ export function parseBibliography(paragraphs: DocxParagraph[]): BibliographyEntr
       type: 'unknown'
     }
 
+    let authors = ''
+    let restOfText = ''
+
+    const sameAuthorMatch = rawText.match(SAME_AUTHOR_REGEX)
     const authorMatch = rawText.match(AUTHOR_FIELD_REGEX)
-    if (!authorMatch) {
+
+    if (sameAuthorMatch) {
+      authors = lastAuthor || sameAuthorMatch[0].trim().replace(/\.$/, '')
+      entry.authors = authors
+      restOfText = rawText.substring(sameAuthorMatch[0].length).trim()
+    } else if (authorMatch) {
+      let authorPart = authorMatch[0]
+      let rest = rawText.substring(authorMatch[0].length)
+
+      while (true) {
+        const initialMatch = rest.match(/^\s+([A-Z]\.)/)
+        if (initialMatch) {
+          authorPart += initialMatch[0]
+          rest = rest.substring(initialMatch[0].length)
+        } else {
+          break
+        }
+      }
+
+      authors = authorPart.trim().replace(/\.$/, '')
+      entry.authors = authors
+      lastAuthor = authors
+      restOfText = rest.trim()
+    } else {
       entries.push(entry)
       continue
     }
 
-    const authors = authorMatch[0].trim().replace(/\.$/, '')
-    entry.authors = authors
+    // Try to match double quotes first, which may contain single quotes/apostrophes inside
+    let quotedTitleMatch = restOfText.match(/^[“"](.*?)[”"]\.?\s*(.*)$/)
+    if (!quotedTitleMatch) {
+      // Fallback for single quotes, avoiding apostrophes
+      quotedTitleMatch = restOfText.match(/^[‘'](.*?)[’'](?![a-zA-Z])\.?\s*(.*)$/)
+    }
 
-    const restOfText = rawText.substring(authorMatch[0].length).trim()
-
-    const quotedTitleMatch = restOfText.match(/^[“"‘]([^“”"‘’]+?)[”"’]\.?\s*(.*)$/)
     if (quotedTitleMatch) {
       const title = quotedTitleMatch[1].trim().replace(/[.,]$/, '').trim()
       const rest = quotedTitleMatch[2].trim()
@@ -83,18 +187,10 @@ export function parseBibliography(paragraphs: DocxParagraph[]): BibliographyEntr
           entry.editor = editorMatch[1].trim()
         }
 
-        const pubMatch = rest.match(/([^.]+?):\s*([^,]+?),\s*(\d{4})\.?$/)
-        if (pubMatch) {
-          entry.location = pubMatch[1].trim()
-          entry.publisher = pubMatch[2].trim()
-          entry.year = pubMatch[3]
-        } else {
-          const simplePubMatch = rest.match(/([^,.]+?),\s*(\d{4})\.?$/)
-          if (simplePubMatch) {
-            entry.publisher = simplePubMatch[1].trim()
-            entry.year = simplePubMatch[2]
-          }
-        }
+        const pubInfo = parsePublicationInfo(rest)
+        if (pubInfo.publisher) entry.publisher = pubInfo.publisher
+        if (pubInfo.location) entry.location = pubInfo.location
+        if (pubInfo.year) entry.year = pubInfo.year
 
         if (!entry.year) {
           const yrMatch = rest.match(/\b\d{4}\b/)
@@ -106,7 +202,7 @@ export function parseBibliography(paragraphs: DocxParagraph[]): BibliographyEntr
         entry.type = 'journal-article'
         entry.title = title
 
-        const journalPattern = /^([^0-9(]+?)\s+(\d+(?:\.\d+)?)\s*\((\d{4})\)(?::\s*(.+))?$/
+        const journalPattern = /^([^0-9(]+?)\s+(\d+(?:\.\d+)?)\s*\((\d{4})\)(?::\s*(.+?))?\.?$/
         const journalMatch = rest.match(journalPattern)
         if (journalMatch) {
           entry.containerTitle = journalMatch[1].trim()
@@ -128,26 +224,19 @@ export function parseBibliography(paragraphs: DocxParagraph[]): BibliographyEntr
     } else {
       entry.type = 'book'
 
-      const bookMatch = restOfText.match(/^(.+?)\.\s+([^.]+?):\s*([^,]+?),\s*(\d{4})\.?$/)
-      if (bookMatch) {
-        entry.title = bookMatch[1].trim()
-        entry.location = bookMatch[2].trim()
-        entry.publisher = bookMatch[3].trim()
-        entry.year = bookMatch[4]
+      const pubInfo = parsePublicationInfo(restOfText)
+      if (pubInfo.year) {
+        entry.year = pubInfo.year
+        entry.publisher = pubInfo.publisher
+        entry.location = pubInfo.location
+        entry.title = pubInfo.cleanTextBefore
       } else {
-        const bookMatch2 = restOfText.match(/^(.+?)\.\s+([^,.]+?),\s*(\d{4})\.?$/)
-        if (bookMatch2) {
-          entry.title = bookMatch2[1].trim()
-          entry.publisher = bookMatch2[2].trim()
-          entry.year = bookMatch2[3]
-        } else {
-          const fields = restOfText.split('.')
-          if (fields.length > 0) {
-            entry.title = fields[0].trim()
-          }
-          const yrMatch = restOfText.match(/\b\d{4}\b/)
-          if (yrMatch) entry.year = yrMatch[0]
+        const fields = restOfText.split('.')
+        if (fields.length > 0) {
+          entry.title = fields[0].trim()
         }
+        const yrMatch = restOfText.match(/\b\d{4}\b/)
+        if (yrMatch) entry.year = yrMatch[0]
       }
     }
 

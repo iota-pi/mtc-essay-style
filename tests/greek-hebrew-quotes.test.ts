@@ -48,4 +48,20 @@ describe("Rule 13: Greek and Hebrew Quotes Check", () => {
     expect(violations[0].correction?.found).toBe("‘λόγος’");
     expect(violations[0].correction?.expected).toBe("λόγος");
   });
+
+  it("should not flag dictionary entry references like s.v. or s.vv. followed by Greek/Hebrew text", () => {
+    const doc = createTestDocument({
+      paragraphs: [
+        createTestParagraph("BDAG, s.v. “ἁγιάζω”; Douglas J. Moo, Heb…"),
+        createTestParagraph("See also TDNT, s.vv. “ἁγιάζω” and “λόγος”."),
+        createTestParagraph("Compare sub verbo “ἁγιάζω” in the dictionary."),
+        createTestParagraph("Also with comma BDAG, s.v., “ἁγιάζω”.")
+      ]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = greekHebrewQuotesRule.check(context);
+
+    expect(violations.length).toBe(0);
+  });
 });

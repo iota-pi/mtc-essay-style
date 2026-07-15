@@ -47,13 +47,13 @@ export function formatText(result: CheckResult, filePath: string, minSeverity: s
 
         // Context line
         const contextParts: string[] = []
-        if (v.paragraphIndex !== undefined) {
+        if (v.paragraphIndex !== undefined && v.paragraphIndex >= 0) {
           contextParts.push(`Paragraph ${v.paragraphIndex + 1}`)
         }
 
         let footnoteId: string | undefined
         if (v.detail) {
-          const fnMatch = v.detail.match(/Footnote ID:\s*(\S+)/i)
+          const fnMatch = v.detail.match(/Footnote ID:\s*([^,\s]+)/i)
           if (fnMatch) {
             footnoteId = fnMatch[1]
           }
@@ -64,7 +64,7 @@ export function formatText(result: CheckResult, filePath: string, minSeverity: s
         }
 
         if (v.paragraphSnippet) {
-          contextParts.push(`starting "${v.paragraphSnippet}"`)
+          contextParts.push(`starting "${v.paragraphSnippet.trimStart()}"`)
         }
 
         let regionText: string | undefined = v.region
@@ -77,7 +77,7 @@ export function formatText(result: CheckResult, filePath: string, minSeverity: s
           if (contextParts.length > 1) {
             contextLine += ` (${contextParts.slice(1).join(', ')})`
           }
-          if (regionText) {
+          if (regionText && regionText !== 'footnote') {
             contextLine += `, in ${regionText}`
           }
           lines.push(contextLine)

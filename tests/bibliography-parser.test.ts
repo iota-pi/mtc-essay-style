@@ -49,4 +49,48 @@ describe('Bibliography Entry Parser', () => {
     expect(entries[0].publisher).toBe('Fortress')
     expect(entries[0].year).toBe('1986')
   })
+
+  it('should parse nested quotes at start of title (e.g. journal article)', () => {
+    const paras = [
+      createTestParagraph('Jeffers, Neil G. T. “‘And Their Children After Them’: A Response to Reformed Baptist Readings of Jeremiah’s New Covenant Promises.” Ecclesia Reformanda 1.2 (2009).')
+    ]
+    const entries = parseBibliography(paras)
+    expect(entries.length).toBe(1)
+    expect(entries[0].type).toBe('journal-article')
+    expect(entries[0].authors).toBe('Jeffers, Neil G. T')
+    expect(entries[0].title).toBe('‘And Their Children After Them’: A Response to Reformed Baptist Readings of Jeremiah’s New Covenant Promises')
+    expect(entries[0].containerTitle).toBe('Ecclesia Reformanda')
+    expect(entries[0].volume).toBe('1.2')
+    expect(entries[0].year).toBe('2009')
+  })
+
+  it('should parse book entry with period in publisher and no city', () => {
+    const paras = [
+      createTestParagraph('O’Brien, Peter T. Hebrews. Pillar New Testament Commentary. W.B. Eerdmans Pub. Co., 2010.')
+    ]
+    const entries = parseBibliography(paras)
+    expect(entries.length).toBe(1)
+    expect(entries[0].type).toBe('book')
+    expect(entries[0].authors).toBe('O’Brien, Peter T')
+    expect(entries[0].title).toBe('Hebrews. Pillar New Testament Commentary')
+    expect(entries[0].publisher).toBe('W.B. Eerdmans Pub. Co.')
+    expect(entries[0].year).toBe('2010')
+  })
+
+  it('should parse same-author dashes and resolve author name from previous entry', () => {
+    const paras = [
+      createTestParagraph('Gatiss, Lee. “The Anglican Doctrine of Infant Baptism.” The Global Anglican 134.4 (2020).'),
+      createTestParagraph('———. The Letter to the Ephesians. Pillar New Testament Commentary. W.B. Eerdmans Pub. Co., 1999.')
+    ]
+    const entries = parseBibliography(paras)
+    expect(entries.length).toBe(2)
+    
+    expect(entries[0].type).toBe('journal-article')
+    expect(entries[0].authors).toBe('Gatiss, Lee')
+    
+    expect(entries[1].type).toBe('book')
+    expect(entries[1].authors).toBe('Gatiss, Lee') // inherited
+    expect(entries[1].publisher).toBe('W.B. Eerdmans Pub. Co.')
+    expect(entries[1].year).toBe('1999')
+  })
 })

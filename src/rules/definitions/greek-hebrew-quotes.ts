@@ -38,6 +38,30 @@ export const greekHebrewQuotesRule: StyleRule = {
           const hasLatin = LATIN_CHAR_PATTERN.test(innerContent)
 
           if (hasGreekOrHebrew && !hasLatin) {
+            // Skip if it is a dictionary/lexicon entry reference (e.g., preceded by "s.v." or "s.vv.")
+            const precedingText = text.slice(0, match.index)
+            let isDictionaryRef = false
+            const refMatches = [...precedingText.matchAll(/\b(s\.?\s*v{1,2}\.?|sub\s+verbo)(?!\w)/gi)]
+            if (refMatches.length > 0) {
+              const lastMatch = refMatches[refMatches.length - 1]
+              if (lastMatch.index !== undefined) {
+                const afterRef = precedingText.slice(lastMatch.index + lastMatch[0].length)
+                
+                // Ensure we only cross separators like spaces, punctuation, quotes, Greek/Hebrew text, and simple conjunctions
+                const latinWords = afterRef.match(/[a-zA-Z]+/g) || []
+                const allowedConjunctions = new Set(['and', 'or', 'et', 'und'])
+                const hasOnlyAllowedConjunctions = latinWords.every(w => allowedConjunctions.has(w.toLowerCase()))
+                const hasSentenceBoundary = /[.!?]\s+[A-Z]/.test(afterRef)
+                
+                if (hasOnlyAllowedConjunctions && !hasSentenceBoundary) {
+                  isDictionaryRef = true
+                }
+              }
+            }
+            if (isDictionaryRef) {
+              continue
+            }
+
             violations.push({
               ruleId: greekHebrewQuotesRule.id,
               ruleName: greekHebrewQuotesRule.name,

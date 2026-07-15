@@ -87,9 +87,10 @@ export function isSentenceStart(text: string, index: number): boolean {
  * Gets a truncated snippet of paragraph text for location context
  */
 export function getParagraphSnippet(text: string, maxLength = 40): string {
-  if (text.length <= maxLength) {
-    return text
+  const trimmed = text.trimStart()
+  if (trimmed.length <= maxLength) {
+    return trimmed
   }
-  return text.substring(0, maxLength) + '…'
+  return trimmed.substring(0, maxLength) + '…'
 }
 

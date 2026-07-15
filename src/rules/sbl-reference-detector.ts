@@ -38,6 +38,7 @@ const PREFIX = `(?:${SBL_PREFIX_REGEX_STR})?`
 // Author name pattern (capitalized names, initials, optional 'and', '&', commas, 'et al.')
 const AUTHOR_SEGMENT = "[A-Z][A-Za-z\\’'-]*\\.?(?:\\s+(?:[A-Z][A-Za-z\\’'-]*\\.?|and|&|de|van|der|von))*"
 const AUTHOR = `${AUTHOR_SEGMENT}(?:,\\s+(?:and\\s+)?${AUTHOR_SEGMENT})*(?:\\s+et\\s+al\\.)?`
+const SHORT_AUTHOR = `(?:${AUTHOR_SEGMENT}\\s+et\\s+al\\.|${AUTHOR_SEGMENT}(?:,\\s+${AUTHOR_SEGMENT})*,\\s+and\\s+${AUTHOR_SEGMENT}|${AUTHOR_SEGMENT}\\s+and\\s+${AUTHOR_SEGMENT}|${AUTHOR_SEGMENT})`
 
 
 // Valid referencing keywords (singular and plural abbreviations, e.g. p., pp., art., arts., fol., fols.)
@@ -71,10 +72,11 @@ const PATTERNS = [
   // 4. Short / Subsequent Reference (Book, Journal, or Chapter)
   // e.g. Talbert, Reading John, 145.
   // e.g. Leyerle, "John Chrysostom," 162.
+  // e.g. Schreiner and Caneday, The Race Set before Us. (no page/section number required)
   {
     type: 'short-reference',
     regex: new RegExp(
-      `^${PREFIX}${AUTHOR},\\s+(?:(?:[“"][^“”"]*?[”"]|[‘'][^‘’']*?[’'])(?:,\\s*|\\s*)|[^,]+,\\s*)${REF_KEYWORD}\\d+[\\d\\s–,-]*\\b\\.?`
+      `^${PREFIX}${SHORT_AUTHOR},\\s+(?:(?:[“"][^“”"]*?[”"]|[‘'][^‘’']*?[’'])(?:\\s*(?:,\\s*)?${REF_KEYWORD}\\d+[\\d\\s–,-]*\\b)?|[^,]*[A-Za-z][^,]*\\s*,\\s*${REF_KEYWORD}\\d+[\\d\\s–,-]*\\b|[^,]*[A-Za-z][^,]*)\\.?`
     )
   },
   // 5. Ibid. Reference
@@ -277,7 +279,7 @@ const BOOK_EXTRACT_REGEX = new RegExp(
 )
 
 const SHORT_EXTRACT_REGEX = new RegExp(
-  `^${PREFIX}(${AUTHOR}),\\s+(?:(?:[“"]([^“”"]*?)[”"]|[‘']([^‘’']*?)[’'])(?:,\\s*|\\s*)|([^,]+),\\s*)`,
+  `^${PREFIX}(${SHORT_AUTHOR}),\\s+(?:(?:[“"]([^“”"]*?)[”"]|[‘']([^‘’']*?)[’'])(?:\\s*(?:,\\s*)?.*)?|([^,]*[A-Za-z][^,]*),\\s*(.*?)|([^,]*[A-Za-z][^,]*)$)`,
   'i'
 )
 
@@ -340,7 +342,7 @@ export function extractReferenceFields(text: string, span: SblReferenceSpan): Sb
     if (match) {
       const authorStr = match[1]
       fields.author = extractFirstAuthorSurname(authorStr)
-      fields.title = (match[2] || match[3] || match[4] || '').trim().replace(/,\s*$/, '').trim()
+      fields.title = (match[2] || match[3] || match[4] || match[6] || '').trim().replace(/[.,]$/, '').trim()
     }
   }
 

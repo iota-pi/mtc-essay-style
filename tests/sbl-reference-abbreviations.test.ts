@@ -147,4 +147,23 @@ describe("Rule 12: SBL Reference Abbreviations", () => {
     expect(violations[1].correction?.found).toBe("fols. 10");
     expect(violations[1].correction?.expected).toBe("fol. 10");
   });
+
+  it("should not flag abbreviations inside italicized book titles or quoted article titles", () => {
+    const doc = createTestDocument({
+      paragraphs: [
+        // Italicized title via runs
+        createTestParagraph("Donald Robinson: selected works. Vol. 1, Assembling God’s People", {
+          runs: [
+            { text: "Donald Robinson: selected works. Vol. 1, Assembling God’s People", properties: { italic: true } }
+          ]
+        }),
+        // Quoted title
+        createTestParagraph("See also Donald Robinson, “The Church in the New Testament, Vol. 1,” in Selected Works.")
+      ]
+    });
+    const sections = { titlePage: [], body: doc.paragraphs, bibliography: [], hasTitlePage: false, hasBibliography: false };
+    const context = createTestContext(doc, sections);
+    const violations = sblReferenceAbbreviationsRule.check(context);
+    expect(violations.length).toBe(0);
+  });
 });

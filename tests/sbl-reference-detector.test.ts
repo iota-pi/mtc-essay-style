@@ -25,6 +25,14 @@ describe("SBL v2 Reference Detector", () => {
       expect(text.substring(spans[0].start, spans[0].end)).toBe(text);
     });
 
+    it("should detect book short references without page numbers", () => {
+      const text = "Schreiner and Caneday, The Race Set before Us.";
+      const spans = detectSblReferences(text);
+      expect(spans.length).toBe(1);
+      expect(spans[0].type).toBe("short-reference");
+      expect(text.substring(spans[0].start, spans[0].end)).toBe(text);
+    });
+
     it("should detect journal first references", () => {
       const text = 'Blake Leyerle, "John Chrysostom on the Gaze," JECS 1 (1993): 159–74.';
       const spans = detectSblReferences(text);
@@ -253,6 +261,14 @@ describe("SBL v2 Reference Detector", () => {
       expect(refs.length).toBe(1);
       expect(refs[0].author).toBe("Talbert");
       expect(refs[0].title).toBe("Reading John");
+    });
+
+    it("should extract fields from short reference without page numbers", () => {
+      const text = "Schreiner and Caneday, The Race Set before Us.";
+      const refs = detectAndExtractReferences(text);
+      expect(refs.length).toBe(1);
+      expect(refs[0].author).toBe("Schreiner");
+      expect(refs[0].title).toBe("The Race Set before Us");
     });
 
     it("should extract fields from quoted short reference", () => {

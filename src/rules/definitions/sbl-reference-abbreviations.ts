@@ -1,4 +1,5 @@
 import { StyleRule, StyleViolation } from '../types'
+import { DocxParagraph } from '../../docx/types'
 import {
   getParagraphText,
   getRegionForParagraph,
@@ -38,6 +39,48 @@ const REF_TERM_PATTERN = new RegExp(
   'gi'
 )
 
+function isIndexItalic(para: DocxParagraph | undefined, index: number): boolean {
+  if (!para) return false
+  let charCount = 0
+  for (const run of para.runs) {
+    const runStart = charCount
+    const runEnd = charCount + run.text.length
+    if (index >= runStart && index < runEnd) {
+      return !!run.properties?.italic
+    }
+    charCount = runEnd
+  }
+  return false
+}
+
+function isInsideQuotes(text: string, index: number): boolean {
+  const preceding = text.substring(0, index)
+  
+  const lastCurlyOpen = preceding.lastIndexOf('“')
+  const lastCurlyClose = preceding.lastIndexOf('”')
+  const lastSingleOpen = preceding.lastIndexOf('‘')
+  const lastSingleClose = preceding.lastIndexOf('’')
+  
+  if (lastCurlyOpen > lastCurlyClose) {
+    return true
+  }
+  if (lastSingleOpen > lastSingleClose) {
+    return true
+  }
+  
+  const straightDoubleCount = (preceding.match(/"/g) || []).length
+  if (straightDoubleCount % 2 === 1) {
+    return true
+  }
+  
+  const straightSingleCount = (preceding.match(/'/g) || []).length
+  if (straightSingleCount % 2 === 1) {
+    return true
+  }
+  
+  return false
+}
+
 export const sblReferenceAbbreviationsRule: StyleRule = {
   id: 'sbl-reference-abbreviations',
   name: 'SBL Reference Abbreviations',
@@ -52,7 +95,8 @@ export const sblReferenceAbbreviationsRule: StyleRule = {
       text: string,
       pIndex: number | undefined,
       region: DocumentRegion | undefined,
-      footnoteId?: string
+      footnoteId?: string,
+      para?: DocxParagraph
     ) => {
       // Find all reference terms
       REF_TERM_PATTERN.lastIndex = 0
@@ -61,6 +105,11 @@ export const sblReferenceAbbreviationsRule: StyleRule = {
       while ((match = REF_TERM_PATTERN.exec(text)) !== null) {
         const matchIndex = match.index
         const matchedTermWithDot = match[0]
+
+        // Skip if within italicized text (book title) or within quotation marks (article title)
+        if (isIndexItalic(para, matchIndex) || isInsideQuotes(text, matchIndex)) {
+          continue
+        }
 
         // Check what follows the term
         const afterText = text.substring(matchIndex + matchedTermWithDot.length)
@@ -153,14 +202,14 @@ export const sblReferenceAbbreviationsRule: StyleRule = {
       const region = getRegionForParagraph(para, sections)
       if (region === 'title-page' || region === 'bibliography') return
       const text = getParagraphText(para)
-      processText(text, index, region)
+      processText(text, index, region, undefined, para)
     })
 
     // Process footnotes
     for (const footnote of doc.footnotes) {
       for (const para of footnote.paragraphs) {
         const text = getParagraphText(para)
-        processText(text, undefined, undefined, String(footnote.id))
+        processText(text, undefined, undefined, String(footnote.id), para)
       }
     }
 
