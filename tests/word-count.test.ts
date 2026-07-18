@@ -33,6 +33,22 @@ describe("Word Counting Utility", () => {
       expect(countWordsInText("hello --- world ...")).toBe(2);
     });
 
+    it("should split words on en-dash and em-dash, but keep hyphenated words as one", () => {
+      expect(countWordsInText("181–272")).toBe(2);
+      expect(countWordsInText("self-evident co-operation")).toBe(2);
+      expect(countWordsInText("word–another–word")).toBe(3);
+      
+      // em-dash tests (always count as separating words)
+      expect(countWordsInText("as something—this is")).toBe(4);
+    });
+
+    it("should count Greek and Hebrew words correctly", () => {
+      expect(countWordsInText("μεσίτης")).toBe(1);
+      expect(countWordsInText("אֲשֶׁר")).toBe(1);
+      expect(countWordsInText("The word μεσίτης means mediator.")).toBe(5);
+      expect(countWordsInText("This is a Hebrew word: אֲשֶׁר")).toBe(6);
+    });
+
     it("should handle empty or whitespace-only inputs", () => {
       expect(countWordsInText("")).toBe(0);
       expect(countWordsInText("    ")).toBe(0);
@@ -46,7 +62,7 @@ describe("Word Counting Utility", () => {
         footnotes: [
           {
             id: 1,
-            paragraphs: [createParagraph("This is footnote one.")]
+            paragraphs: [createParagraph("This is footnote one with 10–20.")]
           }
         ],
         styles: new Map()
@@ -56,7 +72,7 @@ describe("Word Counting Utility", () => {
         titlePage: [createParagraph("Title page cover sheet text")],
         body: [
           createParagraph("First paragraph of the main body text."),
-          createParagraph("Second paragraph of the main body text.")
+          createParagraph("Second paragraph of the main body text with 10–20.")
         ],
         bibliography: [
           createParagraph("References"),
@@ -73,27 +89,21 @@ describe("Word Counting Utility", () => {
 
       // Body:
       // "First paragraph of the main body text." = 7 words
-      // "Second paragraph of the main body text." = 7 words
-      // Total bodyText = 14 words
-      expect(result.bodyText).toBe(14);
+      // "Second paragraph of the main body text with 10–20." = 10 words (split en-dash)
+      // Total bodyText = 17 words
+      expect(result.bodyText).toBe(17);
 
-      // Footnotes: "This is footnote one." = 4 words
-      expect(result.footnotes).toBe(4);
+      // Footnotes:
+      // "This is footnote one with 10–20." = 7 words
+      expect(result.footnotes).toBe(7);
 
       // Bibliography:
       // "References" = 1 word
-      // "Smith, J. (2020). Book." = 4 words (J. and 2020 count as words, but not parenthetical punctuation)
-      // Wait, let's trace "Smith, J. (2020). Book.":
-      // tokens: ["Smith,", "J.", "(2020).", "Book."]
-      // "Smith," (has letters) -> 1
-      // "J." (has letters) -> 2
-      // "(2020)." (has digits) -> 3
-      // "Book." (has letters) -> 4
-      // Total 4 words. Let's make sure it's 5 words total in bibliography.
+      // "Smith, J. (2020). Book." = 4 words
       expect(result.bibliography).toBe(5);
 
-      // Total = bodyText + footnotes = 14 + 4 = 18 words
-      expect(result.total).toBe(18);
+      // Total = bodyText + footnotes = 17 + 7 = 24
+      expect(result.total).toBe(24);
     });
 
     it("should count footnote words excluding SBL bibliographic references but keeping prefixes", () => {
@@ -143,6 +153,9 @@ describe("Word Counting Utility", () => {
       expect(countFootnoteWords("cf. Ibid., 145.")).toBe(1); // "cf." (1 word)
       expect(countFootnoteWords("Some comment (see Talbert, Reading John, 145) here.")).toBe(4); // "Some", "comment", "(see", "here." (4 words)
       expect(countFootnoteWords("Regular comments in a footnote.")).toBe(5);
+
+      // Split en-dash footnote check
+      expect(countFootnoteWords("Regular comments in a footnote with 10–20.")).toBe(8);
 
       // User requested test cases
       expect(countFootnoteWords("Thomas R. Schreiner, “Baptism in the Epistles,” in Believer’s Baptism: Sign of the New Covenant in Christ, NAC Studies in Bible and Theology (Broadman & Holman Publishers, 2006), 77, 93; Schreiner and Wright, “Introduction,” 7.")).toBe(0);

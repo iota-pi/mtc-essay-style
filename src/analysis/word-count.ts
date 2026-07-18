@@ -10,17 +10,20 @@ export interface WordCountResult {
 }
 
 export function countWordsInText(text: string): number {
-  if (!text) return 0
-
-  // Replace all types of whitespace (spaces, tabs, newlines, non-breaking spaces) with a standard space
-  const cleanText = text.replace(/\s+/g, ' ').trim()
+  const cleanText = (
+    text
+      // Em-dashes and En-dashes always count as separating words
+      .replace(/[—–]/g, ' ')
+      // Replace all types of whitespace (spaces, tabs, newlines, non-breaking spaces) with a standard space
+      .replace(/\s+/g, ' ').trim()
+  )
   if (!cleanText) return 0
 
   const tokens = cleanText.split(' ')
   let count = 0
   for (const token of tokens) {
-    // If the token contains at least one letter or number, count it as a word
-    if (/[a-zA-Z0-9\u00C0-\u017F]/.test(token)) {
+    // If the token contains at least one Unicode letter or number, count it as a word
+    if (/[\p{L}\p{N}]/u.test(token)) {
       count += 1
     }
   }
