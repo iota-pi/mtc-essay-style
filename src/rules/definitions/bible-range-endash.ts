@@ -14,7 +14,7 @@ const bookAlternation = ALL_BOOKS.map(name => escapeRegExp(name)).join('|')
 
 // Regex to capture Bible references with hyphens in ranges
 // e.g. Gen 1:1-3, Gen 1-2, 1 Cor 13:1-14:3
-const RANGE_HYPHEN_REGEX = new RegExp(
+export const RANGE_HYPHEN_REGEX = new RegExp(
   `\\b(${bookAlternation})\\s+\\d+(?:[.:]\\d+)?(?:\\s*-\\s*\\d+)+(?:[.:]\\d+)?`,
   'gi'
 )

@@ -17,6 +17,7 @@ import { bibliographyRequiredRule } from './definitions/bibliography-required'
 import { footnoteCitationFormatRule } from './definitions/footnote-citation-format'
 import { bibliographyCompletenessRule } from './definitions/bibliography-completeness'
 import { multipleWhitespacesRule } from './definitions/multiple-whitespaces'
+import { whitespaceBeforePunctuationRule } from './definitions/whitespace-before-punctuation'
 
 // Import and register all style rules.
 export const defaultRegistry = new RuleRegistry()
@@ -38,7 +39,8 @@ defaultRegistry.registerAll([
   bibliographyRequiredRule,
   footnoteCitationFormatRule,
   bibliographyCompletenessRule,
-  multipleWhitespacesRule
+  multipleWhitespacesRule,
+  whitespaceBeforePunctuationRule
 ])
 
 export { RuleRegistry } from './registry'
